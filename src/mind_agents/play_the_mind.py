@@ -677,13 +677,14 @@ async def get_wait_time(state: dict[str, Any], model: Model = Model.GPT35) -> fl
         return 5.0  # Default wait time
 
 
-async def main(verbose: bool = False, models: Optional[list[Model]] = None) -> None:
+async def main(verbose: bool = False, models: Optional[list[Model]] = None, max_turns: Optional[int] = None) -> None:
     """Main function to play The Mind.
 
     Args:
         verbose: Whether to show detailed information
         models: List of models to use for each player. If fewer models than players,
                will cycle through the provided models.
+        max_turns: Optional maximum number of turns before ending the game
     """
     # Initialize game with 3 players
     game = GameState(num_players=3)
@@ -717,6 +718,11 @@ async def main(verbose: bool = False, models: Optional[list[Model]] = None) -> N
         # Check if we lost
         if game.game_over():
             console.print("\n[bold red]Game Over - Out of lives![/bold red]")
+            break
+
+        # Check if we hit max turns
+        if max_turns is not None and game.current_round >= max_turns:
+            console.print("\n[bold yellow]Game Over - Maximum turns reached![/bold yellow]")
             break
 
         # If we completed the round successfully, check for bonus life
@@ -824,6 +830,11 @@ if __name__ == "__main__":
         action="store_true",
         help="Display all available models and their descriptions",
     )
+    parser.add_argument(
+        "--max-turns",
+        type=int,
+        help="Maximum number of turns before ending the game",
+    )
     args = parser.parse_args()
 
     if args.list_models:
@@ -833,4 +844,4 @@ if __name__ == "__main__":
     else:
         # Convert model names to enum values
         models = [Model[m] for m in args.models] if args.models else None
-        asyncio.run(main(verbose=args.verbose, models=models))
+        asyncio.run(main(verbose=args.verbose, models=models, max_turns=args.max_turns))
