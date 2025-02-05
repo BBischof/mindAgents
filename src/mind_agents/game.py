@@ -2,8 +2,11 @@
 
 import random
 from dataclasses import dataclass, field
+from typing import Any
 
+from mind_agents.prompt_assets.prompts.wait_n_seconds_prompts import play_game_template
 from mind_agents.prompt_assets.types import Card, Model
+from mind_agents.prompt_assets.utilities import generate_play_content
 
 
 @dataclass
@@ -13,6 +16,67 @@ class PlayerStats:
     cards_played: int = 0
     star_attempts: int = 0
     lives_lost: int = 0
+
+
+@dataclass
+class PlayerAction:
+    """Represents a player's intended action."""
+
+    player_id: int
+    card: Card
+    wait_time: float
+    reason: str
+    random_tiebreaker: float = field(default_factory=lambda: random.random())
+
+
+@dataclass
+class GameStateInfo:
+    """Encapsulates game state information needed for prompts and display."""
+
+    card: Card
+    num_players: int
+    total_other_cards: int
+    all_cards: list[int]
+    played_cards: list[int]
+    dynamic_content: dict[str, Any]
+    prompt_messages: list[dict[str, Any]]
+
+    @classmethod
+    def from_game_state(cls, game: "GameState", player_id: int, card: Card) -> "GameStateInfo":
+        """Create GameStateInfo from a game state.
+
+        Args:
+            game: Current game state
+            player_id: ID of the player
+            card: Card being played
+
+        Returns:
+            GameStateInfo containing all calculated information
+        """
+        player = game.players[player_id - 1]
+        all_cards = sorted([c.number for c in player.hand])
+        other_players = [p for p in game.players if p.hand and p.id != player_id]
+        total_other_cards = sum(len(p.hand) for p in other_players)
+
+        # Generate content and prompt
+        dynamic_content = generate_play_content(
+            card_number=card.number,
+            num_players=len(game.players),
+            total_other_cards=total_other_cards,
+            all_cards=all_cards,
+            played_cards=game.played_cards,
+        )
+        prompt_messages = play_game_template.construct_prompt(dynamic_content)
+
+        return cls(
+            card=card,
+            num_players=len(game.players),
+            total_other_cards=total_other_cards,
+            all_cards=all_cards,
+            played_cards=game.played_cards,
+            dynamic_content=dynamic_content,
+            prompt_messages=prompt_messages,
+        )
 
 
 @dataclass

@@ -1,16 +1,16 @@
 """Gemini integration module."""
 
-from typing import Any, Optional
+import json
+from typing import Any
 
-import httpx
+import google.generativeai as genai
 
 from .base import LLM, LLMConfig, Response
+from .types import PromptTemplate, ToolSpec
 
 
 class Gemini(LLM):
     """Gemini integration."""
-
-    API_URL_BASE = "https://generativelanguage.googleapis.com/v1/models"
 
     def __init__(self, config: LLMConfig) -> None:
         """Initialize Gemini integration.
@@ -19,10 +19,7 @@ class Gemini(LLM):
             config: LLM configuration.
         """
         super().__init__(config)
-        self.api_url = f"{self.API_URL_BASE}/{config.model_endpoint}:generateContent"
-        self.headers = {
-            "Content-Type": "application/json",
-        }
+        genai.configure(api_key=config.api_key)
 
     async def validate_api_key(self) -> bool:
         """Validate API key by making a test request.
@@ -31,22 +28,22 @@ class Gemini(LLM):
             bool: True if API key is valid, False otherwise.
         """
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    f"{self.API_URL_BASE}?key={self.config.api_key}",
-                    headers=self.headers,
-                    timeout=10.0,
-                )
-                return bool(response.status_code == 200)
+            model = genai.GenerativeModel(self.config.model_endpoint)
+            response = model.generate_content("test")
+            return bool(response)
         except Exception:
             return False
 
-    async def generate(self, prompt: str, system_prompt: Optional[str] = None) -> Response:
+    async def generate(
+        self,
+        template: PromptTemplate,
+        dynamic_content: dict[str, Any],
+    ) -> Response:
         """Generate a response from Gemini.
 
         Args:
-            prompt: User prompt.
-            system_prompt: Optional system prompt to set context.
+            template: The prompt template containing components, tools, and configuration
+            dynamic_content: Values to fill placeholders in components
 
         Returns:
             Response: Generated response.
@@ -54,33 +51,80 @@ class Gemini(LLM):
         Raises:
             Exception: If API request fails.
         """
-        messages: list[dict[str, str]] = []
-        if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": prompt})
+        # Use template to construct messages
+        messages = template.construct_prompt(dynamic_content)
 
-        data: dict[str, Any] = {
-            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-            "generationConfig": {"temperature": self.config.temperature},
+        # Convert messages to Gemini format
+        gemini_messages = []
+        for msg in messages:
+            gemini_messages.append(
+                {
+                    "role": "user" if msg["role"] == "user" else "model",
+                    "parts": [{"text": msg["content"]}],
+                }
+            )
+
+        data = {
+            "contents": gemini_messages,
+            "generationConfig": {
+                "temperature": template.temperature,
+                "maxOutputTokens": self.config.max_tokens if self.config.max_tokens else 2048,
+            },
         }
-        if self.config.max_tokens is not None:
-            data["generationConfig"]["maxOutputTokens"] = self.config.max_tokens
+
+        # Add tools configuration if template has tools
+        if template.available_tools:
+            # Convert tools to Gemini format
+            gemini_tools = []
+            for tool in template.available_tools:
+                if not isinstance(tool, ToolSpec):
+                    continue
+                gemini_tools.append(
+                    {
+                        "functionDeclarations": [
+                            {
+                                "name": tool.name,
+                                "description": tool.description,
+                                "parameters": {
+                                    "type": "object",
+                                    "properties": tool.parameters,
+                                    "required": tool.required_params,
+                                },
+                            }
+                        ]
+                    }
+                )
+            data["tools"] = gemini_tools
+            data["toolChoice"] = "required"  # Force tool usage
 
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{self.api_url}?key={self.config.api_key}",
-                    headers=self.headers,
-                    json=data,
-                    timeout=30.0,
+            model = genai.GenerativeModel(self.config.model_endpoint)
+            response = model.generate_content(data)
+
+            # Extract tool calls if present
+            tool_calls = None
+            if hasattr(response, "candidates") and response.candidates[0].content.parts[0].function_call:
+                tool_calls = []
+                function_call = response.candidates[0].content.parts[0].function_call
+                tool_calls.append(
+                    {
+                        "tool": function_call.name,
+                        "parameters": json.loads(function_call.args),
+                    }
                 )
-                await response.aread()  # Ensure response is fully read
-                await response.raise_for_status()
-                result = await response.json()
-                content = result["candidates"][0]["content"]["parts"][0]["text"]
-                return Response(content=content, raw_response=result)
+
+            return Response(
+                content=str(response.text) if response.text else "",  # Handle None content
+                raw_response=response._raw_response,
+                success=True,
+                error=None,
+                tool_calls=tool_calls,
+            )
         except Exception as e:
-            if isinstance(e, Exception) and "object Response can't be used in 'await' expression" in str(e):
-                # Re-raise without wrapping to avoid double-wrapping
-                raise e from None
-            raise Exception(f"Failed to generate response: {str(e)}") from e
+            return Response(
+                content="",
+                raw_response={"error": str(e)},
+                success=False,
+                error=str(e),
+                tool_calls=None,
+            )

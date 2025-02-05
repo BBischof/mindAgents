@@ -5,6 +5,8 @@ from typing import Any, Optional
 
 from pydantic import BaseModel
 
+from .types import PromptTemplate
+
 
 class Message(BaseModel):
     """A message in a conversation."""
@@ -28,6 +30,9 @@ class Response(BaseModel):
 
     content: str
     raw_response: dict[str, Any]
+    success: bool = True
+    error: Optional[str] = None
+    tool_calls: Optional[list[dict[str, Any]]] = None
 
 
 class LLM(ABC):
@@ -42,12 +47,16 @@ class LLM(ABC):
         self.config = config
 
     @abstractmethod
-    async def generate(self, prompt: str, system_prompt: Optional[str] = None) -> Response:
+    async def generate(
+        self,
+        template: PromptTemplate,
+        dynamic_content: dict[str, Any],
+    ) -> Response:
         """Generate a response from the LLM.
 
         Args:
-            prompt: The input prompt to send to the LLM
-            system_prompt: Optional system prompt to set context
+            template: The prompt template containing components, tools, and configuration
+            dynamic_content: Values to fill placeholders in components
 
         Returns:
             Response containing the generated text and metadata

@@ -1,10 +1,12 @@
 """Claude integration module."""
 
-from typing import Optional
+import json
+from typing import Any
 
 import httpx
 
 from .base import LLM, LLMConfig, Response
+from .types import PromptTemplate, ToolSpec
 
 
 class Claude(LLM):
@@ -42,12 +44,16 @@ class Claude(LLM):
         except Exception:
             return False
 
-    async def generate(self, prompt: str, system_prompt: Optional[str] = None) -> Response:
+    async def generate(
+        self,
+        template: PromptTemplate,
+        dynamic_content: dict[str, Any],
+    ) -> Response:
         """Generate a response from Claude.
 
         Args:
-            prompt: User prompt.
-            system_prompt: Optional system prompt to set context.
+            template: The prompt template containing components, tools, and configuration
+            dynamic_content: Values to fill placeholders in components
 
         Returns:
             Response: Generated response.
@@ -55,18 +61,40 @@ class Claude(LLM):
         Raises:
             Exception: If API request fails.
         """
-        messages = []
-        if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": prompt})
+        # Use template to construct messages
+        messages = template.construct_prompt(dynamic_content)
 
         data = {
             "model": self.config.model_endpoint,
             "messages": messages,
-            "temperature": self.config.temperature,
+            "temperature": template.temperature,  # Use template's temperature
         }
         if self.config.max_tokens is not None:
             data["max_tokens"] = self.config.max_tokens
+
+        # Add tools configuration if template has tools
+        if template.available_tools:
+            # Convert tools to Claude format
+            claude_tools = []
+            for tool in template.available_tools:
+                if not isinstance(tool, ToolSpec):
+                    continue
+                claude_tools.append(
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": tool.name,
+                            "description": tool.description,
+                            "parameters": {
+                                "type": "object",
+                                "properties": tool.parameters,
+                                "required": tool.required_params,
+                            },
+                        },
+                    }
+                )
+            data["tools"] = claude_tools
+            data["tool_choice"] = "required"  # Force tool usage
 
         try:
             async with httpx.AsyncClient() as client:
@@ -80,9 +108,31 @@ class Claude(LLM):
                 await response.raise_for_status()
                 result = await response.json()
                 content = result["content"][0]["text"]
-                return Response(content=content, raw_response=result)
+
+                # Extract tool calls if present
+                tool_calls = None
+                if "tool_calls" in result:
+                    tool_calls = []
+                    for call in result["tool_calls"]:
+                        tool_calls.append(
+                            {
+                                "tool": call["function"]["name"],
+                                "parameters": json.loads(call["function"]["arguments"]),
+                            }
+                        )
+
+                return Response(
+                    content=content or "",  # Handle None content
+                    raw_response=result,
+                    success=True,
+                    error=None,
+                    tool_calls=tool_calls,
+                )
         except Exception as e:
-            if isinstance(e, Exception) and "object Response can't be used in 'await' expression" in str(e):
-                # Re-raise without wrapping to avoid double-wrapping
-                raise e from None
-            raise Exception(f"Failed to generate response: {str(e)}") from e
+            return Response(
+                content="",
+                raw_response={"error": str(e)},
+                success=False,
+                error=str(e),
+                tool_calls=None,
+            )

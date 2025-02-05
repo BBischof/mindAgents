@@ -1,16 +1,16 @@
 """LLM API utilities."""
 
 import logging
-from typing import Any, Optional
+from typing import Optional
 
 import tiktoken
 
-from .base import LLM, Response
+from .base import LLM
 from .chatgpt import ChatGPT
 from .claude import Claude
 from .config import get_api_key
 from .gemini import Gemini
-from .types import Model, PromptTemplate
+from .types import Model
 
 # Map of Model enum to their API endpoint strings
 MODEL_ENDPOINTS: dict[Model, str] = {
@@ -109,7 +109,7 @@ async def get_llm_client(model: Model, api_key: Optional[str] = None) -> LLM:
         (),
         {
             "api_key": api_key,
-            "temperature": 0.7,  # Default values, will be overridden by template
+            "temperature": None,  # Will be set by template
             "max_tokens": None,
             "model_endpoint": MODEL_ENDPOINTS[model],  # Pass the actual endpoint string
         },
@@ -117,39 +117,3 @@ async def get_llm_client(model: Model, api_key: Optional[str] = None) -> LLM:
 
     implementation_class = get_model_implementation(model)
     return implementation_class(config)
-
-
-async def generate_response(
-    messages: list[dict[str, Any]],
-    template: PromptTemplate,
-) -> Response:
-    """Generate a response using the specified template and model.
-
-    Args:
-        messages: List of message dictionaries for the chat
-        template: The prompt template containing model configuration
-
-    Returns:
-        Response: The model's response or error information
-    """
-    try:
-        llm = await get_llm_client(template.model)
-
-        # Convert messages to prompt format
-        prompt = messages[-1]["content"]  # User message is always last
-        system_prompt = None
-        if len(messages) > 1 and messages[0]["role"] == "system":
-            system_prompt = messages[0]["content"]
-
-        response = await llm.generate(prompt=prompt, system_prompt=system_prompt)
-        if not response.content:
-            logging.error("Model returned empty response")
-        return response
-
-    except Exception as e:
-        error_msg = f"Failed to generate response: {str(e)}"
-        logging.error(error_msg)
-        return Response(
-            content="",
-            raw_response={"error": str(e)},
-        )

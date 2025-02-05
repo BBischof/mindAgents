@@ -14,7 +14,7 @@ def load_api_keys() -> dict[str, str]:
     Raises:
         FileNotFoundError: If config file doesn't exist
         KeyError: If required keys are missing from config
-        ValueError: If config values are not strings
+        ValueError: If API key values are not strings
     """
     config_path = Path.home() / ".config" / "llm_keys" / "config.json"
 
@@ -24,20 +24,21 @@ def load_api_keys() -> dict[str, str]:
     with open(config_path) as f:
         raw_config = json.load(f)
 
-    # Validate and convert config to dict[str, str]
-    config: dict[str, str] = {}
-    for key, value in raw_config.items():
-        if not isinstance(key, str):
-            raise ValueError(f"Config key {key} must be a string")
-        if not isinstance(value, str):
-            raise ValueError(f"Config value for {key} must be a string")
-        config[key] = value
-
+    # Only validate API key values
     required_keys = {
         "openai_api_key": "OpenAI",
         "anthropic_api_key": "Anthropic",
         "google_api_key": "Google",
     }
+
+    config: dict[str, str] = {}
+    for key in required_keys:
+        if key not in raw_config:
+            continue
+        value = raw_config[key]
+        if not isinstance(value, str):
+            raise ValueError(f"API key value for {key} must be a string")
+        config[key] = value
 
     missing_keys = [key for key in required_keys if key not in config or not config[key]]
 

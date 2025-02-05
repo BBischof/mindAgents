@@ -62,51 +62,6 @@ class ToolResponse:
     error: Optional[str] = None
 
 
-AVAILABLE_TOOLS = {
-    "play_card": ToolSpec(
-        name="play_card",
-        description="Play a card from your hand in The Mind game",
-        parameters={
-            "card_number": {
-                "type": "integer",
-                "description": "The number of the card to play (1-100)",
-            },
-            "confidence": {
-                "type": "integer",
-                "description": "Confidence level in playing this card now (1-10)",
-            },
-        },
-        required_params=["card_number", "confidence"],
-    ),
-    "wait": ToolSpec(
-        name="wait",
-        description="Wait for other players to play their cards",
-        parameters={
-            "duration": {
-                "type": "integer",
-                "description": "How long to wait in seconds (1-60)",
-            },
-            "reason": {
-                "type": "string",
-                "description": "Why you're choosing to wait",
-            },
-        },
-        required_params=["duration", "reason"],
-    ),
-    "use_star": ToolSpec(
-        name="use_star",
-        description="Use a star card to have all players reveal their lowest card",
-        parameters={
-            "reason": {
-                "type": "string",
-                "description": "Why you're choosing to use a star",
-            }
-        },
-        required_params=["reason"],
-    ),
-}
-
-
 class Model(str, Enum):
     """Available LLM models."""
 
@@ -192,7 +147,7 @@ class PromptComponent:
     """A component of a prompt template."""
 
     role: Role
-    static_content: str
+    dynamic_content: str
 
     def fill_dynamic_content(self, dynamic_content: dict[str, Any]) -> dict[str, Any]:
         """Fill dynamic parts of the message content.
@@ -203,7 +158,7 @@ class PromptComponent:
         Returns:
             Complete message with filled content
         """
-        filled_content = self.static_content.format(**dynamic_content)
+        filled_content = self.dynamic_content.format(**dynamic_content)
         return {
             "role": self.role.value,
             "content": filled_content,
@@ -220,7 +175,7 @@ class PromptTemplate:
     temperature: float
     top_p: float
     model: Model
-    available_tools: Optional[list[str]] = None
+    available_tools: Optional[list[ToolSpec]] = None
 
     def __repr__(self) -> str:
         tools_len = len(self.available_tools) if self.available_tools is not None else 0
@@ -241,27 +196,5 @@ class PromptTemplate:
             List of messages ready for API consumption
         """
         messages = [component.fill_dynamic_content(dynamic_content) for component in self.components]
-
-        # If template has tools, add their specifications to system message
-        if self.available_tools and messages and messages[0]["role"] == "system":
-            tools_desc = "\n\nAvailable tools:\n"
-            for tool_name in self.available_tools:
-                if tool_name in AVAILABLE_TOOLS:
-                    tool = AVAILABLE_TOOLS[tool_name]
-                    tools_desc += f"\n{tool.name}: {tool.description}"
-                    tools_desc += "\nParameters:"
-                    for param_name, param_spec in tool.parameters.items():
-                        required = "*" if param_name in tool.required_params else ""
-                        tools_desc += f"\n- {param_name}{required}: {param_spec['description']}"
-                        if param_spec.get("type") == "integer":
-                            tools_desc += " (type: integer)"
-                        elif param_spec.get("type") == "string":
-                            tools_desc += " (type: string)"
-
-            tools_desc += "\n\nYou MUST use these tools through the OpenAI function calling interface."
-            tools_desc += "\nDO NOT write code or suggest actions - the function calling interface will handle that."
-            tools_desc += "\nJust provide your reasoning and let the interface handle the tool calls."
-
-            messages[0]["content"] += tools_desc
 
         return messages
