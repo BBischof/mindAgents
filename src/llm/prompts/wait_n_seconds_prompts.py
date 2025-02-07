@@ -1,7 +1,7 @@
 """Prompt template for playing The Mind card game."""
 
 
-from ..types import Model, PromptComponent, PromptTemplate, Role, ToolSpec
+from llm.types import Model, PromptComponent, PromptTemplate, Role, ToolSpec
 
 # System component explaining the game rules and strategy
 system_component = PromptComponent(

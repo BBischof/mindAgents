@@ -8,8 +8,7 @@ from typing import Any
 
 import google.generativeai as genai
 
-from .base import LLM, LLMConfig, Response
-from .types import PromptTemplate, ToolSpec
+from ..types import LLM, LLMConfig, PromptTemplate, Response, ToolSpec
 
 logger = logging.getLogger(__name__)
 

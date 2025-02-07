@@ -9,16 +9,15 @@ import random
 from pathlib import Path
 from typing import Optional
 
+from core.display import display_game_state, display_player_action
+from core.game import GameState, GameStateInfo, PlayerAction, PlayerStats
+from llm.prompts.wait_n_seconds_prompts import play_game_template
+from llm.types import Card, Model
+from llm.utilities import get_llm_client
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.panel import Panel
 from rich.table import Table
-
-from mind_agents.display import display_game_state, display_player_action
-from mind_agents.game import GameState, GameStateInfo, PlayerAction, PlayerStats
-from mind_agents.prompt_assets.api_utilities import get_llm_client
-from mind_agents.prompt_assets.prompts.wait_n_seconds_prompts import play_game_template
-from mind_agents.prompt_assets.types import Card, Model
 
 # Set up rich console and logging
 console = Console()

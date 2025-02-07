@@ -9,9 +9,8 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+from llm.types import Model
 from tqdm import tqdm
-
-from mind_agents.prompt_assets.types import Model
 
 
 async def run_test_scenario(

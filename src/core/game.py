@@ -4,9 +4,9 @@ import random
 from dataclasses import dataclass, field
 from typing import Any
 
-from mind_agents.prompt_assets.prompts.wait_n_seconds_prompts import play_game_template
-from mind_agents.prompt_assets.types import Card, Model
-from mind_agents.prompt_assets.utilities import generate_play_content
+from llm.prompts.wait_n_seconds_prompts import play_game_template
+from llm.types import Card, Model
+from llm.utilities import generate_play_content
 
 
 @dataclass

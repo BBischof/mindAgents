@@ -1,5 +1,6 @@
 """Type definitions for LLM interactions."""
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Optional
@@ -19,6 +20,43 @@ class Card:
         """Validate card number is in valid range."""
         if not 1 <= self.number <= 100:
             raise ValueError("Card number must be between 1 and 100")
+
+
+@dataclass
+class LLMConfig:
+    """Configuration for LLM models."""
+
+    api_key: str
+    model_endpoint: str
+    temperature: float = 0.7
+    max_tokens: Optional[int] = None
+    system_prompt: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        """Validate configuration values."""
+        if not isinstance(self.api_key, str):
+            raise TypeError("api_key must be a string")
+        if not self.api_key:
+            raise ValueError("api_key cannot be empty")
+
+        if not isinstance(self.model_endpoint, str):
+            raise TypeError("model_endpoint must be a string")
+        if not self.model_endpoint:
+            raise ValueError("model_endpoint cannot be empty")
+
+        if not isinstance(self.temperature, (int, float)):
+            raise TypeError("temperature must be a number")
+        if not 0 <= self.temperature <= 1:
+            raise ValueError("temperature must be between 0 and 1")
+
+        if self.max_tokens is not None:
+            if not isinstance(self.max_tokens, int):
+                raise TypeError("max_tokens must be an integer")
+            if self.max_tokens <= 0:
+                raise ValueError("max_tokens must be positive")
+
+        if self.system_prompt is not None and not isinstance(self.system_prompt, str):
+            raise TypeError("system_prompt must be a string")
 
 
 @dataclass
@@ -113,17 +151,15 @@ class Message:
 class Response:
     """Encapsulates a response from the LLM API."""
 
-    content: Optional[str]
-    raw_response: Optional[Any]
-    success: bool
-    error: Optional[str]
-    tool_calls: Optional[list[ToolCall]] = None
+    content: str
+    raw_response: dict[str, Any]
+    success: bool = True
+    error: Optional[str] = None
+    tool_calls: Optional[list[dict[str, Any]]] = None
 
     def __repr__(self) -> str:
         if not self.success:
             return f"Response(error='{self.error}')"
-        if self.content is None:
-            return "Response(content=None)"
         return f"Response(content='{self.content[:50]}...')"
 
     def display(self, width: int = 50) -> None:
@@ -133,12 +169,11 @@ class Response:
         if not self.success:
             print(f"Error: {self.error}")
         else:
-            if self.content is not None:
-                print(self.content)
+            print(self.content)
             if self.tool_calls:
                 print("\nTool Calls:")
                 for call in self.tool_calls:
-                    print(f"- {call.tool}: {call.parameters}")
+                    print(f"- {call['tool']}: {call['parameters']}")
         print("=" * width)
 
 
@@ -196,5 +231,45 @@ class PromptTemplate:
             List of messages ready for API consumption
         """
         messages = [component.fill_dynamic_content(dynamic_content) for component in self.components]
-
         return messages
+
+
+class LLM(ABC):
+    """Base interface for LLM interactions."""
+
+    def __init__(self, config: LLMConfig) -> None:
+        """Initialize the LLM with configuration.
+
+        Args:
+            config: Configuration for the LLM including API key and parameters
+        """
+        self.config = config
+
+    @abstractmethod
+    async def generate(
+        self,
+        template: PromptTemplate,
+        dynamic_content: dict[str, Any],
+    ) -> Response:
+        """Generate a response from the LLM.
+
+        Args:
+            template: The prompt template containing components, tools, and configuration
+            dynamic_content: Values to fill placeholders in components
+
+        Returns:
+            Response containing the generated text and metadata
+
+        Raises:
+            Exception: If the API call fails
+        """
+        pass
+
+    @abstractmethod
+    async def validate_api_key(self) -> bool:
+        """Validate that the API key is correct and working.
+
+        Returns:
+            bool indicating if the API key is valid
+        """
+        pass

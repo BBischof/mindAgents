@@ -3,11 +3,10 @@
 import math
 from typing import Optional
 
+from core.game import GameState, GameStateInfo, PlayerAction
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-
-from mind_agents.game import GameState, GameStateInfo, PlayerAction
 
 # Set up rich console for display
 console = Console()

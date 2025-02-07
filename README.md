@@ -13,21 +13,29 @@ The Mind is a cooperative card game where players must play their cards in ascen
 - Star power for revealing cards
 - Auto-play system for maintaining game flow
 
-## Game Simulator
+## Project Structure
 
-The simulator allows you to test different scenarios and analyze AI behavior in specific game situations.
+The project is organized into the following main components:
 
-### Features
-- Test specific card combinations
-- Analyze AI decision-making
-- Track statistics for each player
-- Compare different model behaviors
-
-### Parameters
-- `-p/--player-cards`: Number of cards each player has
-- `-o/--other-cards`: Number of cards held by other players
-- `-l/--played-cards`: Number of cards already played
-- `-m/--model`: Model to use for the test player
+```
+src/
+├── core/                    # Core game logic
+│   ├── game.py             # Game mechanics and state
+│   ├── display.py          # Display utilities
+│   └── simulator.py        # Game simulation tools
+│
+├── llm/                    # LLM integration
+│   ├── providers/          # LLM providers
+│   │   ├── anthropic.py    # Claude integration
+│   │   ├── openai.py       # GPT integration
+│   │   └── google.py       # Gemini integration
+│   ├── prompts/           # LLM prompts
+│   │   └── wait_n_seconds_prompts.py
+│   ├── types.py           # Type definitions
+│   └── utilities.py       # LLM utilities
+│
+└── play.py               # Main entry point
+```
 
 ## Model Selection
 
@@ -37,7 +45,8 @@ The game supports multiple AI models that can be assigned to different players. 
 - CLAUDE3_SONNET: Claude 3 Sonnet model (default)
 - GPT4: GPT-4 model
 - GPT35: GPT-3.5 model
-- (Other models as defined in `types.py`)
+- GEMINI_PRO: Google's Gemini Pro model
+- (Other models as defined in `llm/types.py`)
 
 ### Using Different Models
 
@@ -45,22 +54,22 @@ You can specify which model each player should use when running the game. To see
 
 ```bash
 # List all available models
-python -m src.mind_agents.play_the_mind --list-models
+python -m src.play --list-models
 # or for the simulator
-python -m src.mind_agents.mind_simulator --list-models
+python -m src.core.simulator --list-models
 ```
 
 Then use specific models in your games:
 
 ```bash
 # Run game with specific models for each player
-python -m src.mind_agents.play_the_mind --models CLAUDE3_SONNET GPT4 GPT35
+python -m src.play --models CLAUDE3_SONNET GPT4 GPT35
 
 # Run game with the same model for all players
-python -m src.mind_agents.play_the_mind --models CLAUDE3_SONNET
+python -m src.play --models CLAUDE3_SONNET
 
 # Run simulator with a specific model
-python -m src.mind_agents.mind_simulator -p 1 -o 1 -l 0 -m GPT4
+python -m src.core.simulator -p 1 -o 1 -l 0 -m GPT4
 ```
 
 The game will display which model is controlling each player and track their individual performance statistics.
@@ -73,7 +82,14 @@ The game will display which model is controlling each player and track their ind
    ```bash
    pip install -r requirements.txt
    ```
-4. Set up your API keys in `~/.config/llm_keys/config.json`
+4. Set up your API keys in `~/.config/llm_keys/config.json`:
+   ```json
+   {
+       "openai_api_key": "your-openai-key",
+       "anthropic_api_key": "your-anthropic-key",
+       "google_api_key": "your-google-key"
+   }
+   ```
 
 ## Output Format
 
@@ -94,10 +110,10 @@ This allows for analysis of different models' performance and strategies.
 
 ```bash
 # Run the standard game
-uv run python -m src.mind_agents.play_the_mind
+python -m src.play
 
 # Run with verbose output
-uv run python -m src.mind_agents.play_the_mind -v
+python -m src.play -v
 ```
 
 ## Game Simulator
@@ -115,14 +131,14 @@ The simulator allows testing specific game scenarios to analyze the AI's decisio
 
 ```bash
 # Basic simulation with default parameters
-uv run python -m src.mind_agents.mind_simulator
+python -m src.core.simulator
 
 # Specify parameters:
 # -p: Number of cards the player has
 # -o: Number of cards held by other players
 # -l: Number of played cards to consider
 # -v: Verbose output
-uv run python -m src.mind_agents.mind_simulator -p 2 -o 3 -l 1
+python -m src.core.simulator -p 2 -o 3 -l 1
 ```
 
 ### Simulation Parameters
@@ -152,15 +168,15 @@ uv run python -m src.mind_agents.mind_simulator -p 2 -o 3 -l 1
 # - 1 card has been played
 # - Using resolution of 3 (cards spaced by 3)
 # - Using GPT-4 model
-python -m src.mind_agents.mind_simulator -p 2 -o 3 -l 1 -r 3 -m GPT4
+python -m src.core.simulator -p 2 -o 3 -l 1 -r 3 -m GPT4
 
 # Results will be saved to: simulation_p2_h3_played1_r3_gpt4.csv
 
 # List available models
-python -m src.mind_agents.mind_simulator --list-models
+python -m src.core.simulator --list-models
 
 # Run with default parameters (GPT3.5)
-python -m src.mind_agents.mind_simulator
+python -m src.core.simulator
 ```
 
 ### Output Format
@@ -177,15 +193,6 @@ Each CSV contains:
 - `wait_time`: The AI's decided wait time before playing
 - `model`: The model used for decision making
 
-## Installation
-
-1. Clone the repository
-2. Create a Python virtual environment
-3. Install dependencies:
-```bash
-uv pip install -r requirements.txt
-```
-
 ## Requirements
 
 - Python 3.11+
@@ -193,3 +200,7 @@ uv pip install -r requirements.txt
   - rich: For beautiful terminal output
   - pandas: For data handling in simulator
   - tqdm: For progress bars
+  - tiktoken: For token counting
+  - anthropic: For Claude API
+  - google-generativeai: For Gemini API
+  - httpx: For API requests

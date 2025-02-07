@@ -5,8 +5,7 @@ from typing import Any
 
 import httpx
 
-from .base import LLM, LLMConfig, Response
-from .types import PromptTemplate, ToolSpec
+from ..types import LLM, LLMConfig, PromptTemplate, Response, ToolSpec
 
 
 class ChatGPT(LLM):
