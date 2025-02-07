@@ -3,27 +3,6 @@
 
 from ..types import Model, PromptComponent, PromptTemplate, Role, ToolSpec
 
-# Define available tools
-TOOLS: list[ToolSpec] = [
-    ToolSpec(
-        name="wait_for_n_seconds",
-        description="""
-        Wait for N seconds before playing your card. Choose a wait time based on:
-        """,
-        parameters={
-            "reason": {
-                "type": "string",
-                "description": "Brief explanation of why this wait time was chosen",
-            },
-            "seconds": {
-                "type": "integer",
-                "description": "Number of seconds to wait before playing the card",
-            },
-        },
-        required_params=["seconds", "reason"],
-    )
-]
-
 # System component explaining the game rules and strategy
 system_component = PromptComponent(
     role=Role.SYSTEM,
@@ -63,6 +42,27 @@ user_component = PromptComponent(
     What should I do?
     """,
 )
+
+# Define available tools
+TOOLS: list[ToolSpec] = [
+    ToolSpec(
+        name="wait_for_n_seconds",
+        description="""
+        Wait for N seconds before playing your card. Choose a wait time based on:
+        """,
+        parameters={
+            "reason": {
+                "type": "string",
+                "description": "Brief explanation of why this wait time was chosen",
+            },
+            "seconds": {
+                "type": "integer",
+                "description": "Number of seconds to wait before playing the card",
+            },
+        },
+        required_params=["seconds", "reason"],
+    )
+]
 
 # Create the template instance
 play_game_template = PromptTemplate(

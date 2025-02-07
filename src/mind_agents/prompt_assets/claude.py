@@ -1,18 +1,18 @@
 """Claude integration module."""
 
-import json
+import logging
 from typing import Any
 
-import httpx
+import anthropic
 
 from .base import LLM, LLMConfig, Response
 from .types import PromptTemplate, ToolSpec
 
+logger = logging.getLogger(__name__)
+
 
 class Claude(LLM):
     """Claude integration."""
-
-    API_URL = "https://api.anthropic.com/v1/messages"
 
     def __init__(self, config: LLMConfig) -> None:
         """Initialize Claude integration.
@@ -21,11 +21,7 @@ class Claude(LLM):
             config: LLM configuration.
         """
         super().__init__(config)
-        self.headers = {
-            "Content-Type": "application/json",
-            "x-api-key": config.api_key,
-            "anthropic-version": "2023-06-01",
-        }
+        self.client = anthropic.Anthropic(api_key=config.api_key)
 
     async def validate_api_key(self) -> bool:
         """Validate API key by making a test request.
@@ -34,13 +30,9 @@ class Claude(LLM):
             bool: True if API key is valid, False otherwise.
         """
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    "https://api.anthropic.com/v1/models",
-                    headers=self.headers,
-                    timeout=10.0,
-                )
-                return bool(response.status_code == 200)
+            # List models to validate the API key
+            self.client.models.list()
+            return True
         except Exception:
             return False
 
@@ -64,71 +56,80 @@ class Claude(LLM):
         # Use template to construct messages
         messages = template.construct_prompt(dynamic_content)
 
-        data = {
-            "model": self.config.model_endpoint,
-            "messages": messages,
-            "temperature": template.temperature,  # Use template's temperature
-        }
-        if self.config.max_tokens is not None:
-            data["max_tokens"] = self.config.max_tokens
+        # Convert messages to Claude 3 format and find system message
+        claude_messages = []
+        system_message = None
+        for msg in messages:
+            if msg["role"] == "system":
+                system_message = msg["content"]
+            else:
+                claude_messages.append(
+                    {"role": "assistant" if msg["role"] == "assistant" else "user", "content": msg["content"]}
+                )
 
-        # Add tools configuration if template has tools
+        # Prepare tools if available
+        tools = None
         if template.available_tools:
-            # Convert tools to Claude format
-            claude_tools = []
+            tools = []
             for tool in template.available_tools:
                 if not isinstance(tool, ToolSpec):
                     continue
-                claude_tools.append(
+                tools.append(
                     {
-                        "type": "function",
-                        "function": {
-                            "name": tool.name,
-                            "description": tool.description,
-                            "parameters": {
-                                "type": "object",
-                                "properties": tool.parameters,
-                                "required": tool.required_params,
-                            },
+                        "name": tool.name,
+                        "description": tool.description,
+                        "input_schema": {
+                            "type": "object",
+                            "properties": tool.parameters,
+                            "required": tool.required_params,
                         },
                     }
                 )
-            data["tools"] = claude_tools
-            data["tool_choice"] = "required"  # Force tool usage
 
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    self.API_URL,
-                    headers=self.headers,
-                    json=data,
-                    timeout=30.0,
-                )
-                await response.aread()  # Ensure response is fully read
-                await response.raise_for_status()
-                result = await response.json()
-                content = result["content"][0]["text"]
+            # Make the API call using the client
+            message_params = {
+                "model": self.config.model_endpoint,
+                "messages": claude_messages,
+                "system": system_message,
+                "temperature": template.temperature,
+                "tools": tools,
+                "max_tokens": self.config.max_tokens
+                if isinstance(self.config.max_tokens, int) and self.config.max_tokens > 0
+                else 1024,
+            }
 
-                # Extract tool calls if present
-                tool_calls = None
-                if "tool_calls" in result:
-                    tool_calls = []
-                    for call in result["tool_calls"]:
-                        tool_calls.append(
-                            {
-                                "tool": call["function"]["name"],
-                                "parameters": json.loads(call["function"]["arguments"]),
-                            }
-                        )
+            # Log what we're about to send
+            logger.debug(
+                f"Sending to Claude API:\nSystem: {system_message}\nMessages: {claude_messages}\nTools: {tools}"
+            )
 
-                return Response(
-                    content=content or "",  # Handle None content
-                    raw_response=result,
-                    success=True,
-                    error=None,
-                    tool_calls=tool_calls,
-                )
+            # Make the API call using the client
+            message = self.client.messages.create(**message_params)
+
+            # Log the response for debugging
+            logger.debug(f"Response from Claude API: {message}")
+
+            # Extract content and tool calls
+            content = ""
+            tool_calls = None
+
+            # Process each content block
+            for block in message.content:
+                if block.type == "text":
+                    content = block.text
+                elif block.type == "tool_use":
+                    tool_calls = [{"tool": block.name, "parameters": block.input}]
+
+            return Response(
+                content=content,
+                raw_response=message.model_dump(),
+                success=True,
+                error=None,
+                tool_calls=tool_calls,
+            )
         except Exception as e:
+            logger.error(f"Error from Claude API: {str(e)}")
             return Response(
                 content="",
                 raw_response={"error": str(e)},

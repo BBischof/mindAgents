@@ -106,6 +106,12 @@ async def get_player_action(
     )
 
     if not response or not response.tool_calls:
+        logger.error(
+            f"Failed to get valid response for player {player_id}:\n"
+            f"Response: {response}\n"
+            f"Model: {model.name}\n"
+            f"Game state: {state_info.dynamic_content}"
+        )
         return None
 
     tool_call = response.tool_calls[0]  # We only use the first tool call
@@ -138,7 +144,13 @@ async def get_player_action(
             wait_time = min(wait_time, 15.0)
             reason = f"Calculated {wait_time:.1f} second wait based on card value {card_value} and gap of {gap}"
         else:
-            logger.error(f"Unknown tool: {tool_call['tool']}")
+            logger.error(
+                f"Unknown tool used by player {player_id}:\n"
+                f"Tool: {tool_call['tool']}\n"
+                f"Model: {model.name}\n"
+                f"Parameters: {tool_call.get('parameters', {})}\n"
+                f"Game state: {state_info.dynamic_content}"
+            )
             return None
 
         return PlayerAction(
@@ -148,7 +160,13 @@ async def get_player_action(
             reason=reason,
         )
     except (KeyError, ValueError) as e:
-        logger.error(f"Failed to parse response: {e}")
+        logger.error(
+            f"Failed to parse response for player {player_id}:\n"
+            f"Error: {str(e)}\n"
+            f"Tool call: {tool_call}\n"
+            f"Model: {model.name}\n"
+            f"Game state: {state_info.dynamic_content}"
+        )
         return None
 
 
@@ -215,10 +233,13 @@ async def play_round(game: GameState, verbose: bool = False) -> None:
                 display_player_action(action, verbose=verbose, game_state=game)
             else:
                 logger.error(f"Failed to get action for player {player.id}")
+                # Exit immediately on player action failure
+                raise RuntimeError(f"Critical error: Failed to get action for player {player.id}")
 
         if not actions:
             logger.error("No valid actions found!")
-            return
+            # Exit immediately if no valid actions were found
+            raise RuntimeError("Critical error: No valid actions found!")
 
         # Handle star usage
         if star_users:
@@ -274,10 +295,14 @@ async def play_round(game: GameState, verbose: bool = False) -> None:
                         display_player_action(action, verbose=verbose, game_state=game)
                     else:
                         logger.error(f"Failed to get action for player {player.id}")
+                        # Exit immediately on player action failure
+                        raise RuntimeError(f"Critical error: Failed to get action for player {player.id}")
 
                 # If no actions (shouldn't happen since we checked active_players), return
                 if not actions:
-                    return
+                    logger.error("No valid actions found after star usage!")
+                    # Exit immediately if no valid actions were found
+                    raise RuntimeError("Critical error: No valid actions found after star usage!")
             else:
                 # Not all players used a star, or no stars remaining
                 if game.stars_remaining == 0:
@@ -301,6 +326,8 @@ async def play_round(game: GameState, verbose: bool = False) -> None:
                             display_player_action(new_action, verbose=verbose, game_state=game)
                         else:
                             logger.error(f"Failed to get new action for player {player_id}")
+                            # Exit immediately on player action failure
+                            raise RuntimeError(f"Critical error: Failed to get new action for player {player_id}")
 
         # Sort actions by wait time, using random tiebreaker for equal wait times
         actions.sort(key=lambda x: (x.wait_time, x.random_tiebreaker))
