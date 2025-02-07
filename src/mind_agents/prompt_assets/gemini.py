@@ -48,7 +48,7 @@ class Gemini(LLM):
             config: LLM configuration.
         """
         super().__init__(config)
-        genai.configure(api_key=config.api_key)
+        genai.configure(api_key=config.api_key, transport="rest")
         # Don't create the model here since we need the template's temperature
         # for configuration
 
@@ -117,7 +117,7 @@ class Gemini(LLM):
                         for param_name, param_info in tool.parameters.items():
                             prompt += f"- {param_name}: {param_info.get('description', '')}\n"
 
-            # Call the Gemini API.
+            # Call the Gemini API
             response = model.generate_content(prompt)
             logger.debug(f"Got raw response from Gemini: {response}")
 
