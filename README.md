@@ -118,65 +118,32 @@ uv run python -m src.play -v
 
 ## Game Simulator
 
-The simulator allows testing specific game scenarios to analyze the AI's decision-making. This simple benchmark can be used to evaluate the performance of different AI models.
+The simulator allows testing specific game scenarios to analyze AI behavior and decision-making. This simple benchmark can be used to evaluate the performance of different AI models.
 
-### Simulator Features
-
+### Features
 - Test specific card combinations
-- Control number of cards held by other players
-- Specify previously played cards
-- Generate comprehensive test data
+- Analyze AI decision-making
+- Track statistics for each player
+- Compare different model behaviors
 
-### Running Simulations
+### Parameters
+- `-p/--player-cards`: Number of cards the test player has (must be ≥ 1)
+- `-o/--other-cards`: Number of cards held by other players (must be ≥ 1)
+- `-l/--played-cards`: Number of cards already played (must be ≥ 0)
+- `-r/--resolution`: Space between consecutive card values (higher values = fewer combinations)
+- `-m/--model`: Model to use for the test player (use `--list-models` to see options)
+
+### Example Usage
 
 ```bash
 # Basic simulation with default parameters
 uv run python -m src.core.simulator
 
-# Specify parameters:
-# -p: Number of cards the player has
-# -o: Number of cards held by other players
-# -l: Number of played cards to consider
-# -v: Verbose output
-uv run python -m src.core.simulator -p 2 -o 3 -l 1
-```
-
-### Simulation Parameters
-
-- `player_cards (-p)`: Number of cards the test player has
-  - Must be ≥ 1
-  - Will test all possible combinations of cards
-- `other_cards (-o)`: Number of cards held by other players
-  - Must be ≥ 1 (game logic requires at least one other card in play)
-- `played_cards (-l)`: Number of cards already played
-  - Must be ≥ 0
-  - Will test all valid combinations of played cards
-- `resolution (-r)`: Space between consecutive card values
-  - Must be ≥ 1
-  - Higher values reduce the number of combinations tested
-  - Example: resolution=3 will use cards 1,4,7,10,...
-- `model (-m)`: Model to use for decision making
-  - Defaults to GPT35
-  - Use `--list-models` to see available options
-
-### Example Usage
-
-```bash
-# Test scenarios where:
-# - Player has 2 cards
-# - Other players have 3 cards total
-# - 1 card has been played
-# - Using resolution of 3 (cards spaced by 3)
-# - Using GPT-4 model
+# Test specific scenario
 uv run python -m src.core.simulator -p 2 -o 3 -l 1 -r 3 -m GPT4
-
-# Results will be saved to: simulation_p2_h3_played1_r3_gpt4.csv
 
 # List available models
 uv run python -m src.core.simulator --list-models
-
-# Run with default parameters (GPT3.5)
-uv run python -m src.core.simulator
 ```
 
 ### Output Format
