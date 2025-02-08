@@ -3,15 +3,13 @@
 import json
 from typing import Any
 
-import httpx
+from openai import OpenAI
 
 from ..types import LLM, LLMConfig, PromptTemplate, Response, ToolSpec
 
 
 class ChatGPT(LLM):
     """ChatGPT integration."""
-
-    API_URL = "https://api.openai.com/v1/chat/completions"
 
     def __init__(self, config: LLMConfig) -> None:
         """Initialize ChatGPT integration.
@@ -20,10 +18,7 @@ class ChatGPT(LLM):
             config: LLM configuration.
         """
         super().__init__(config)
-        self.headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {config.api_key}",
-        }
+        self.client = OpenAI(api_key=config.api_key)
 
     async def validate_api_key(self) -> bool:
         """Validate API key by making a test request.
@@ -32,13 +27,8 @@ class ChatGPT(LLM):
             bool: True if API key is valid, False otherwise.
         """
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    "https://api.openai.com/v1/models",
-                    headers=self.headers,
-                    timeout=10.0,
-                )
-                return bool(response.status_code == 200)
+            self.client.models.list()
+            return True
         except Exception:
             return False
 
@@ -62,13 +52,37 @@ class ChatGPT(LLM):
         # Use template to construct messages
         messages = template.construct_prompt(dynamic_content)
 
-        data = {
-            "model": self.config.model_endpoint,
+        # For models that don't support system messages, convert them to user messages
+        if not self.config.metadata.supports_system_messages:
+            # Combine any system messages into the first user message
+            system_content = ""
+            user_messages = []
+            for msg in messages:
+                if msg["role"] == "system":
+                    system_content += msg["content"] + "\n\n"
+                else:
+                    user_messages.append(msg)
+
+            if system_content and user_messages:
+                user_messages[0]["content"] = system_content + user_messages[0]["content"]
+            messages = user_messages
+
+        # Prepare completion parameters
+        completion_params: dict[str, Any] = {
+            "model": self.config.metadata.model_id,
             "messages": messages,
-            "temperature": template.temperature,  # Use template's temperature
         }
+
+        # Add temperature if supported
+        if self.config.metadata.supports_temperature:
+            completion_params["temperature"] = template.temperature
+
         if self.config.max_tokens is not None:
-            data["max_tokens"] = self.config.max_tokens
+            completion_params["max_tokens"] = self.config.max_tokens
+
+        # Add reasoning_effort if supported and specified
+        if self.config.metadata.supports_reasoning_effort and self.config.metadata.reasoning_effort is not None:
+            completion_params["reasoning_effort"] = self.config.metadata.reasoning_effort.value
 
         # Add tools configuration if template has tools
         if template.available_tools:
@@ -91,40 +105,33 @@ class ChatGPT(LLM):
                         },
                     }
                 )
-            data["tools"] = openai_tools
-            data["tool_choice"] = "required"  # Force tool usage
+            completion_params["tools"] = openai_tools
+            completion_params["tool_choice"] = "required"
 
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    self.API_URL,
-                    headers=self.headers,
-                    json=data,
-                    timeout=30.0,
-                )
-                response.raise_for_status()
-                result = response.json()
-                content = result["choices"][0]["message"]["content"]
+            completion = self.client.chat.completions.create(**completion_params)
+            message = completion.choices[0].message
+            content = message.content or ""
 
-                # Extract tool calls if present
-                tool_calls = None
-                if "tool_calls" in result["choices"][0]["message"]:
-                    tool_calls = []
-                    for call in result["choices"][0]["message"]["tool_calls"]:
-                        tool_calls.append(
-                            {
-                                "tool": call["function"]["name"],
-                                "parameters": json.loads(call["function"]["arguments"]),
-                            }
-                        )
+            # Extract tool calls if present
+            tool_calls = None
+            if message.tool_calls:
+                tool_calls = []
+                for call in message.tool_calls:
+                    tool_calls.append(
+                        {
+                            "tool": call.function.name,
+                            "parameters": json.loads(call.function.arguments),
+                        }
+                    )
 
-                return Response(
-                    content=content or "",  # Handle None content
-                    raw_response=result,
-                    success=True,
-                    error=None,
-                    tool_calls=tool_calls,
-                )
+            return Response(
+                content=content,
+                raw_response=completion.model_dump(),
+                success=True,
+                error=None,
+                tool_calls=tool_calls,
+            )
         except Exception as e:
             return Response(
                 content="",

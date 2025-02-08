@@ -9,21 +9,7 @@ import tiktoken
 from .providers.anthropic import Claude
 from .providers.google import Gemini
 from .providers.openai import ChatGPT
-from .types import LLM, LLMConfig, Model
-
-# Map of Model enum to their API endpoint strings
-MODEL_ENDPOINTS: dict[Model, str] = {
-    # OpenAI models
-    Model.GPT4: "gpt-4",
-    Model.GPT4_TURBO: "gpt-4-turbo-preview",
-    Model.GPT35: "gpt-3.5-turbo",
-    # Anthropic models
-    Model.CLAUDE3_OPUS: "claude-3-opus-20240229",
-    Model.CLAUDE3_SONNET: "claude-3-sonnet-20240229",
-    # Google models
-    Model.GEMINI_PRO: "gemini-pro",
-    Model.GEMINI_PRO_VISION: "gemini-pro-vision",
-}
+from .types import LLM, LLMConfig, get_model_metadata
 
 
 def get_token_count(text: str | list | dict, model: str = "gpt-4") -> int:
@@ -51,30 +37,31 @@ def get_token_count(text: str | list | dict, model: str = "gpt-4") -> int:
     return 0
 
 
-def get_model_implementation(model: Model) -> type[LLM]:
+def get_model_implementation(model_name: str) -> type[LLM]:
     """Get the appropriate LLM implementation for a model.
 
     Args:
-        model: The model to get the implementation for
+        model_name: The name of the model to get the implementation for
 
     Returns:
         The LLM implementation class
     """
-    if model in {Model.GPT4, Model.GPT4_TURBO, Model.GPT35}:
+    provider = get_model_metadata(model_name).provider
+    if provider == "openai":
         return ChatGPT
-    elif model in {Model.CLAUDE3_OPUS, Model.CLAUDE3_SONNET}:
+    elif provider == "anthropic":
         return Claude
-    elif model in {Model.GEMINI_PRO, Model.GEMINI_PRO_VISION}:
+    elif provider == "google":
         return Gemini
     else:
-        raise ValueError(f"Unknown model: {model}")
+        raise ValueError(f"Unknown provider: {provider}")
 
 
-def load_api_key(model: Model) -> str:
+def load_api_key(model_name: str) -> str:
     """Load API key from config file.
 
     Args:
-        model: The model to get the API key for
+        model_name: The name of the model to get the API key for
 
     Returns:
         The API key for the model
@@ -89,38 +76,29 @@ def load_api_key(model: Model) -> str:
     with open(config_path) as f:
         config = json.load(f)
 
-    if model in {Model.GPT4, Model.GPT4_TURBO, Model.GPT35}:
-        if "openai_api_key" not in config:
-            raise ValueError("OpenAI API key not found in config")
-        return cast(str, config["openai_api_key"])
-    elif model in {Model.CLAUDE3_OPUS, Model.CLAUDE3_SONNET}:
-        if "anthropic_api_key" not in config:
-            raise ValueError("Anthropic API key not found in config")
-        return cast(str, config["anthropic_api_key"])
-    elif model in {Model.GEMINI_PRO, Model.GEMINI_PRO_VISION}:
-        if "google_api_key" not in config:
-            raise ValueError("Google API key not found in config")
-        return cast(str, config["google_api_key"])
-    else:
-        raise ValueError(f"Unknown model: {model}")
+    provider = get_model_metadata(model_name).provider
+    key_name = f"{provider}_api_key"
+    if key_name not in config:
+        raise ValueError(f"{provider.title()} API key not found in config")
+    return cast(str, config[key_name])
 
 
-async def get_llm_client(model: Model, api_key: Optional[str] = None) -> LLM:
+async def get_llm_client(model_name: str, api_key: Optional[str] = None) -> LLM:
     """Get an LLM client for the specified model.
 
     Args:
-        model: The model to use
+        model_name: The name of the model to use
         api_key: Optional API key. If not provided, will be loaded from config
 
     Returns:
         An initialized LLM client
     """
-    implementation = get_model_implementation(model)
+    implementation = get_model_implementation(model_name)
     if api_key is None:
-        api_key = load_api_key(model)
+        api_key = load_api_key(model_name)
     config = LLMConfig(
         api_key=api_key,
-        model_endpoint=MODEL_ENDPOINTS[model],
+        model_name=model_name,
     )
     return implementation(config)
 

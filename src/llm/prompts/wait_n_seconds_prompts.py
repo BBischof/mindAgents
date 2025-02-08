@@ -1,7 +1,7 @@
 """Prompt template for playing The Mind card game."""
 
 
-from llm.types import Model, PromptComponent, PromptTemplate, Role, ToolSpec
+from llm.types import PromptComponent, PromptTemplate, Role, ToolSpec
 
 # System component explaining the game rules and strategy
 system_component = PromptComponent(
@@ -71,6 +71,6 @@ play_game_template = PromptTemplate(
     components=[system_component, user_component],
     temperature=0,
     top_p=1,
-    model=Model.GPT35,
+    model_name="GPT35_TURBO",
     available_tools=TOOLS,
 )

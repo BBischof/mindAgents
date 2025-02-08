@@ -55,7 +55,7 @@ class Claude(LLM):
         # Use template to construct messages
         messages = template.construct_prompt(dynamic_content)
 
-        # Convert messages to Claude 3 format and find system message
+        # Convert messages to Claude format and find system message
         claude_messages = []
         system_message = None
         for msg in messages:
@@ -88,7 +88,7 @@ class Claude(LLM):
         try:
             # Make the API call using the client
             message_params = {
-                "model": self.config.model_endpoint,
+                "model": self.config.metadata.model_id,
                 "messages": claude_messages,
                 "system": system_message,
                 "temperature": template.temperature,

@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 
 @dataclass
@@ -22,12 +22,130 @@ class Card:
             raise ValueError("Card number must be between 1 and 100")
 
 
+class ReasoningEffort(str, Enum):
+    """Reasoning effort for O1/O3 models."""
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+@dataclass
+class ModelMetadata:
+    """Metadata for a model."""
+
+    provider: Literal["openai", "anthropic", "google"]
+    model_id: str  # The actual model ID to use with the API
+    context_length: int
+    supports_system_messages: bool = True
+    supports_temperature: bool = True
+    supports_reasoning_effort: bool = False
+    reasoning_effort: Optional[ReasoningEffort] = None  # For O3 models that support reasoning effort
+
+
+# Model metadata mapping
+MODELS: dict[str, ModelMetadata] = {
+    # OpenAI models
+    "GPT4": ModelMetadata(
+        provider="openai",
+        model_id="gpt-4",
+        context_length=8192,
+    ),
+    "GPT4_TURBO": ModelMetadata(
+        provider="openai",
+        model_id="gpt-4-turbo",
+        context_length=128000,
+    ),
+    "GPT35_TURBO": ModelMetadata(
+        provider="openai",
+        model_id="gpt-3.5-turbo",
+        context_length=4096,
+    ),
+    "GPT_O1": ModelMetadata(
+        provider="openai",
+        model_id="o1-2024-12-17",
+        context_length=4096,
+        supports_system_messages=False,
+        supports_temperature=False,
+    ),
+    "GPT_O3_MINI_LOW": ModelMetadata(
+        provider="openai",
+        model_id="o3-mini-2025-01-31",
+        context_length=4096,
+        supports_system_messages=False,
+        supports_temperature=False,
+        supports_reasoning_effort=True,
+        reasoning_effort=ReasoningEffort.LOW,
+    ),
+    "GPT_O3_MINI_MED": ModelMetadata(
+        provider="openai",
+        model_id="o3-mini-2025-01-31",
+        context_length=4096,
+        supports_system_messages=False,
+        supports_temperature=False,
+        supports_reasoning_effort=True,
+        reasoning_effort=ReasoningEffort.MEDIUM,
+    ),
+    "GPT_O3_MINI_HIGH": ModelMetadata(
+        provider="openai",
+        model_id="o3-mini-2025-01-31",
+        context_length=4096,
+        supports_system_messages=False,
+        supports_temperature=False,
+        supports_reasoning_effort=True,
+        reasoning_effort=ReasoningEffort.HIGH,
+    ),
+    # Anthropic models
+    "CLAUDE3_OPUS": ModelMetadata(
+        provider="anthropic",
+        model_id="claude-3-opus-20240229",
+        context_length=200000,
+    ),
+    "CLAUDE3_SONNET": ModelMetadata(
+        provider="anthropic",
+        model_id="claude-3-sonnet-20240229",
+        context_length=200000,
+    ),
+    "CLAUDE3_HAIKU": ModelMetadata(
+        provider="anthropic",
+        model_id="claude-3-haiku-20240307",
+        context_length=200000,
+    ),
+    "CLAUDE35_SONNET": ModelMetadata(
+        provider="anthropic",
+        model_id="claude-3-5-sonnet-20240620",
+        context_length=200000,
+    ),
+    "CLAUDE35_HAIKU": ModelMetadata(
+        provider="anthropic",
+        model_id="claude-3-5-haiku-20241022",
+        context_length=200000,
+    ),
+    # Google models
+    "GEMINI_1_5_FLASH": ModelMetadata(
+        provider="google",
+        model_id="gemini-1.5-flash",
+        context_length=32768,
+    ),
+    "GEMINI_1_5_PRO": ModelMetadata(
+        provider="google",
+        model_id="gemini-1.5-pro",
+        context_length=32768,
+    ),
+    "GEMINI_2_0_FLASH": ModelMetadata(
+        provider="google",
+        model_id="gemini-2.0-flash-001",
+        context_length=32768,
+    ),
+}
+
+
 @dataclass
 class LLMConfig:
     """Configuration for LLM models."""
 
     api_key: str
-    model_endpoint: str
+    model_name: str
     temperature: float = 0.7
     max_tokens: Optional[int] = None
     system_prompt: Optional[str] = None
@@ -39,10 +157,10 @@ class LLMConfig:
         if not self.api_key:
             raise ValueError("api_key cannot be empty")
 
-        if not isinstance(self.model_endpoint, str):
-            raise TypeError("model_endpoint must be a string")
-        if not self.model_endpoint:
-            raise ValueError("model_endpoint cannot be empty")
+        if not isinstance(self.model_name, str):
+            raise TypeError("model_name must be a string")
+        if self.model_name not in MODELS:
+            raise ValueError(f"Unknown model: {self.model_name}")
 
         if not isinstance(self.temperature, (int, float)):
             raise TypeError("temperature must be a number")
@@ -57,6 +175,11 @@ class LLMConfig:
 
         if self.system_prompt is not None and not isinstance(self.system_prompt, str):
             raise TypeError("system_prompt must be a string")
+
+    @property
+    def metadata(self) -> ModelMetadata:
+        """Get metadata for this model."""
+        return MODELS[self.model_name]
 
 
 @dataclass
@@ -100,23 +223,6 @@ class ToolResponse:
     error: Optional[str] = None
 
 
-class Model(str, Enum):
-    """Available LLM models."""
-
-    # OpenAI models
-    GPT4 = "gpt-4"
-    GPT4_TURBO = "gpt-4-turbo-preview"
-    GPT35 = "gpt-3.5-turbo"
-
-    # Anthropic models
-    CLAUDE3_OPUS = "claude-3-opus-20240229"
-    CLAUDE3_SONNET = "claude-3-sonnet-20240229"
-
-    # Google models
-    GEMINI_PRO = "gemini-pro"
-    GEMINI_PRO_VISION = "gemini-pro-vision"
-
-
 class Role(str, Enum):
     """Message roles in a conversation."""
 
@@ -124,6 +230,23 @@ class Role(str, Enum):
     SYSTEM = "system"
     ASSISTANT = "assistant"
     FUNCTION = "function"
+
+
+def get_model_metadata(model_name: str) -> ModelMetadata:
+    """Get metadata for a model.
+
+    Args:
+        model_name: The name of the model to get metadata for
+
+    Returns:
+        The model's metadata
+
+    Raises:
+        ValueError: If the model name is not found
+    """
+    if model_name not in MODELS:
+        raise ValueError(f"Unknown model: {model_name}")
+    return MODELS[model_name]
 
 
 @dataclass
@@ -209,15 +332,20 @@ class PromptTemplate:
     components: list[PromptComponent]
     temperature: float
     top_p: float
-    model: Model
+    model_name: str  # Changed from model: Model to use string
     available_tools: Optional[list[ToolSpec]] = None
+
+    def __post_init__(self) -> None:
+        """Validate template values."""
+        if self.model_name not in MODELS:
+            raise ValueError(f"Unknown model: {self.model_name}")
 
     def __repr__(self) -> str:
         tools_len = len(self.available_tools) if self.available_tools is not None else 0
         return (
             f"PromptTemplate(name={self.name}, version={self.version}, "
             f"temperature={self.temperature}, top_p={self.top_p}, "
-            f"model={self.model.value}, components={len(self.components)}, "
+            f"model={self.model_name}, components={len(self.components)}, "  # Changed from model.value to model_name
             f"tools={tools_len})"
         )
 

@@ -42,11 +42,24 @@ src/
 The game supports multiple AI models that can be assigned to different players. Each model may have different strategies and behaviors.
 
 ### Available Models
-- CLAUDE3_SONNET: Claude 3 Sonnet model (default)
-- GPT4: GPT-4 model
-- GPT35: GPT-3.5 model
-- GEMINI_PRO: Google's Gemini Pro model
-- (Other models as defined in `llm/types.py`)
+- OpenAI Models:
+  - GPT4: GPT-4 (8k context)
+  - GPT4_TURBO: GPT-4 Turbo (latest function-calling enabled)
+  - GPT35_TURBO: GPT-3.5 Turbo (4k context)
+  - GPT_O1: OpenAI o1 reasoning model
+  - GPT_O3_MINI: OpenAI o3-mini model
+
+- Anthropic Models:
+  - CLAUDE3_OPUS: Claude 3 Opus model
+  - CLAUDE3_SONNET: Claude 3 Sonnet model
+  - CLAUDE3_HAIKU: Claude 3 Haiku model
+  - CLAUDE35_SONNET: Claude 3.5 Sonnet model
+  - CLAUDE35_HAIKU: Claude 3.5 Haiku model
+
+- Google Models:
+  - GEMINI_1_5_FLASH: Gemini 1.5 Flash model
+  - GEMINI_1_5_PRO: Gemini 1.5 Pro model
+  - GEMINI_2_0_FLASH: Gemini 2.0 Flash model
 
 ### Using Different Models
 
@@ -63,7 +76,7 @@ Then use specific models in your games:
 
 ```bash
 # Run game with specific models for each player
-uv run python -m src.play --models CLAUDE3_SONNET GPT4 GPT35
+uv run python -m src.play --models CLAUDE3_SONNET GPT4 GPT35_TURBO
 
 # Run game with the same model for all players
 uv run python -m src.play --models CLAUDE3_SONNET
@@ -71,103 +84,3 @@ uv run python -m src.play --models CLAUDE3_SONNET
 # Run simulator with a specific model
 uv run python -m src.core.simulator -p 1 -o 1 -l 0 -m GPT4
 ```
-
-The game will display which model is controlling each player and track their individual performance statistics.
-
-## Installation and Requirements
-
-1. Clone the repository
-2. Create a Python virtual environment
-3. Install requirements:
-   ```bash
-   uv pip install -r requirements.txt
-   ```
-4. Set up your API keys in `~/.config/llm_keys/config.json`:
-   ```json
-   {
-       "openai_api_key": "your-openai-key",
-       "anthropic_api_key": "your-anthropic-key",
-       "google_api_key": "your-google-key"
-   }
-   ```
-
-## Output Format
-
-The game provides detailed output including:
-- Current game state
-- Player actions and decisions
-- Card plays and their outcomes
-- Star power usage
-- End-game statistics for each player/model
-
-### Player Statistics
-For each player, the game tracks:
-- Number of cards successfully played
-- Number of times they attempted to use a star
-- Number of lives they cost the team
-
-This allows for analysis of different models' performance and strategies.
-
-```bash
-# Run the standard game
-uv run python -m src.play
-
-# Run with verbose output
-uv run python -m src.play -v
-```
-
-## Game Simulator
-
-The simulator allows testing specific game scenarios to analyze AI behavior and decision-making. This simple benchmark can be used to evaluate the performance of different AI models.
-
-### Features
-- Test specific card combinations
-- Analyze AI decision-making
-- Track statistics for each player
-- Compare different model behaviors
-
-### Parameters
-- `-p/--player-cards`: Number of cards the test player has (must be ≥ 1)
-- `-o/--other-cards`: Number of cards held by other players (must be ≥ 1)
-- `-l/--played-cards`: Number of cards already played (must be ≥ 0)
-- `-r/--resolution`: Space between consecutive card values (higher values = fewer combinations)
-- `-m/--model`: Model to use for the test player (use `--list-models` to see options)
-
-### Example Usage
-
-```bash
-# Basic simulation with default parameters
-uv run python -m src.core.simulator
-
-# Test specific scenario
-uv run python -m src.core.simulator -p 2 -o 3 -l 1 -r 3 -m GPT4
-
-# List available models
-uv run python -m src.core.simulator --list-models
-```
-
-### Output Format
-
-The simulator generates CSV files with the naming format:
-```
-simulation_p{player_cards}_h{other_cards}_played{played_cards}_r{resolution}_{model}.csv
-```
-
-Each CSV contains:
-- `player_cards`: Tuple of cards the player has
-- `other_cards`: Number of cards held by others
-- `played_cards`: Tuple of cards already played
-- `wait_time`: The AI's decided wait time before playing
-- `model`: The model used for decision making
-
-## Requirements
-
-- Python 3.11+
-- Dependencies listed in requirements.txt:
-  - rich: For beautiful terminal output
-  - pandas: For data handling in simulator
-  - tqdm: For progress bars
-  - tiktoken: For token counting
-  - anthropic: For Claude API
-  - google-generativeai: For Gemini API
-  - httpx: For API requests

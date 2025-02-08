@@ -12,7 +12,7 @@ from typing import Optional
 from core.display import display_game_state, display_player_action
 from core.game import GameState, GameStateInfo, PlayerAction, PlayerStats
 from llm.prompts.wait_n_seconds_prompts import play_game_template
-from llm.types import Card, Model
+from llm.types import MODELS, Card
 from llm.utilities import get_llm_client
 from rich.console import Console
 from rich.logging import RichHandler
@@ -95,8 +95,8 @@ async def get_player_action(
     state_info = GameStateInfo.from_game_state(game, player_id, card)
 
     # Get LLM client with the player's assigned model
-    model = game.player_models[player_id - 1]  # player_id is 1-indexed
-    client = await get_llm_client(model)
+    model_name = game.player_models[player_id - 1]  # player_id is 1-indexed
+    client = await get_llm_client(model_name)
 
     # Generate response using the template
     response = await client.generate(
@@ -108,7 +108,7 @@ async def get_player_action(
         logger.error(
             f"Failed to get valid response for player {player_id}:\n"
             f"Response: {response}\n"
-            f"Model: {model.name}\n"
+            f"Model: {model_name}\n"
             f"Game state: {state_info.dynamic_content}"
         )
         return None
@@ -146,7 +146,7 @@ async def get_player_action(
             logger.error(
                 f"Unknown tool used by player {player_id}:\n"
                 f"Tool: {tool_call['tool']}\n"
-                f"Model: {model.name}\n"
+                f"Model: {model_name}\n"
                 f"Parameters: {tool_call.get('parameters', {})}\n"
                 f"Game state: {state_info.dynamic_content}"
             )
@@ -163,7 +163,7 @@ async def get_player_action(
             f"Failed to parse response for player {player_id}:\n"
             f"Error: {str(e)}\n"
             f"Tool call: {tool_call}\n"
-            f"Model: {model.name}\n"
+            f"Model: {model_name}\n"
             f"Game state: {state_info.dynamic_content}"
         )
         return None
@@ -242,10 +242,10 @@ async def play_round(game: GameState, verbose: bool = False) -> None:
 
         # Handle star usage
         if star_users:
-            if len(star_users) == len(active_players) and game.stars_remaining > 0:
+            if len(star_users) == len(active_players) and game.stars > 0:
                 # All players want to use a star
                 console.print("[bold yellow]All players chose to use a star![/bold yellow]")
-                game.stars_remaining -= 1
+                game.stars -= 1
 
                 # Update star attempt stats for all players
                 for player_id in star_users:
@@ -304,7 +304,7 @@ async def play_round(game: GameState, verbose: bool = False) -> None:
                     raise RuntimeError("Critical error: No valid actions found after star usage!")
             else:
                 # Not all players used a star, or no stars remaining
-                if game.stars_remaining == 0:
+                if game.stars == 0:
                     console.print("[yellow]Some players wanted to use a star, but none remaining![/yellow]")
                 else:
                     console.print("[yellow]Some players wanted to use a star, but not all players agreed![/yellow]")
@@ -354,7 +354,7 @@ async def play_round(game: GameState, verbose: bool = False) -> None:
 
         if not would_be_valid:
             # Remove a life for invalid move
-            game.lives_remaining -= 1
+            game.lives -= 1
             console.print("[red]Lost a life due to invalid move![/red]")
             console.print()
 
@@ -424,35 +424,39 @@ def should_award_bonus_life(round_completed: int, num_players: int) -> bool:
         return round_completed in common_rounds
 
 
-async def main(verbose: bool = False, models: Optional[list[Model]] = None, max_turns: Optional[int] = None) -> None:
-    """Main function to play The Mind.
+async def main(verbose: bool = False, models: Optional[list[str]] = None, max_turns: Optional[int] = None) -> None:
+    """Run the game.
 
     Args:
-        verbose: Whether to show detailed information
+        verbose: Whether to show detailed output
         models: List of models to use for each player. If fewer models than players,
-               will cycle through the provided models.
-        max_turns: Optional maximum number of turns before ending the game
+            will cycle through the provided models.
+        max_turns: Maximum number of turns to play
     """
-    # Initialize game with 3 players
+    # Initialize game state
     game = GameState(num_players=3)
 
     # If no models specified, use default for all players
     if not models:
-        models = [Model.GPT35] * len(game.players)
-    else:
-        # If fewer models than players, cycle through them
-        models = models * (len(game.players) // len(models) + 1)
-        models = models[: len(game.players)]
+        models = ["GPT35_TURBO"] * len(game.players)
+
+    # If fewer models than players, cycle through them
+    models = models * (len(game.players) // len(models) + 1)
+    models = models[: len(game.players)]
 
     # Store models in game state for display purposes
     game.player_models = models
 
+    # Display initial game state
+    if verbose:
+        print("\nInitial game state:")
+        print("Using models:")
+        for i, model_name in enumerate(models, 1):
+            print(f"Player {i}: {model_name}")
+        display_game_state(game)
+
     # Initialize player statistics
     game.player_stats = [PlayerStats() for _ in range(len(game.players))]
-
-    print("Using models:")
-    for i, model in enumerate(models, 1):
-        print(f"Player {i}: {model.name}")
 
     # Play rounds until game over
     while not game.game_over():
@@ -474,7 +478,7 @@ async def main(verbose: bool = False, models: Optional[list[Model]] = None, max_
 
         # If we completed the round successfully, check for bonus life
         if should_award_bonus_life(game.current_round, len(game.players)):
-            game.lives_remaining += 1
+            game.lives += 1
             console.print(f"\n[bold green]Bonus life awarded for completing round {game.current_round}![/bold green]")
 
         # Increment round
@@ -543,46 +547,42 @@ async def test_specific_scenario(game_state_json: str, verbose: bool = False) ->
 
 def display_available_models() -> None:
     """Display the list of available models."""
+    console = Console()
     console.print("\n[bold cyan]Available Models:[/bold cyan]")
-    table = Table(show_header=True, box=None)
-    table.add_column("Model", style="bold blue")
-    table.add_column("API String", style="orange3")  # Set orange style for API strings
 
-    # Add each model from the Model enum with its mapped string value
-    for model in Model:
-        table.add_row(model.name, model.value)
+    table = Table(show_header=True)
+    table.add_column("Model", style="bold blue")
+    table.add_column("Description", style="green")
+
+    # Add each model from the MODELS dictionary
+    for model_name, metadata in MODELS.items():
+        description = f"{metadata.provider.title()} model with {metadata.context_length} context length"
+        table.add_row(model_name, description)
 
     console.print(Panel(table, title="[bold blue]The Mind - Model Options[/bold blue]"))
-    console.print()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Play The Mind card game")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Show detailed information")
-    parser.add_argument("--test", help="Test mode: Provide game state as JSON string")
     parser.add_argument(
         "--models",
         nargs="+",
-        choices=[m.name for m in Model],
-        help="Models to use for each player (e.g., GPT35 CLAUDE3_SONNET)",
+        type=str,
+        choices=list(MODELS.keys()),
+        help="Models to use for each player (e.g., GPT35_TURBO CLAUDE3_SONNET)",
     )
     parser.add_argument(
         "--list-models",
         action="store_true",
         help="Display all available models and their descriptions",
     )
-    parser.add_argument(
-        "--max-turns",
-        type=int,
-        help="Maximum number of turns before ending the game",
-    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="Show detailed output")
+    parser.add_argument("--max-turns", type=int, help="Maximum number of turns to play")
     args = parser.parse_args()
 
     if args.list_models:
         display_available_models()
-    elif args.test:
-        asyncio.run(test_specific_scenario(args.test, args.verbose))
-    else:
-        # Convert model names to enum values
-        models = [Model[m] for m in args.models] if args.models else None
-        asyncio.run(main(verbose=args.verbose, models=models, max_turns=args.max_turns))
+        exit(0)
+
+    # Run the game
+    asyncio.run(main(verbose=args.verbose, models=args.models, max_turns=args.max_turns))

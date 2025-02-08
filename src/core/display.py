@@ -26,8 +26,8 @@ def display_game_state(game: GameState, verbose: bool = False, show_stats: bool 
     table.add_column("Value")
 
     table.add_row("Round", str(game.current_round))
-    table.add_row("Lives", "❤️  " * game.lives_remaining)
-    table.add_row("Stars", "⭐ " * game.stars_remaining)
+    table.add_row("Lives", "❤️  " * game.lives)
+    table.add_row("Stars", "⭐ " * game.stars)
 
     if game.played_cards:
         table.add_row("Played", " → ".join(str(c) for c in game.played_cards))
@@ -39,8 +39,7 @@ def display_game_state(game: GameState, verbose: bool = False, show_stats: bool 
             # Get model name if available
             model_name = ""
             if hasattr(game, "player_models"):
-                model = game.player_models[player.id - 1]
-                model_name = f" ({model.name})"
+                model_name = f" ({game.player_models[player.id - 1]})"
             table.add_row(
                 f"Player {player.id}{model_name}",
                 ", ".join(str(c.number) for c in cards),
@@ -63,8 +62,7 @@ def display_game_state(game: GameState, verbose: bool = False, show_stats: bool 
             # Get model name
             model_name = ""
             if hasattr(game, "player_models"):
-                model = game.player_models[i]
-                model_name = f" ({model.name})"
+                model_name = f" ({game.player_models[i]})"
 
             stats_table.add_row(
                 f"Player {i + 1}{model_name}",
@@ -109,7 +107,7 @@ def display_player_action(
     model_name = ""
     if game_state and hasattr(game_state, "player_models"):
         model = game_state.player_models[action.player_id - 1]
-        model_name = f" ({model.name})"
+        model_name = f" ({model})"
 
     table.add_row("Player", f"{action.player_id}{model_name}")
     table.add_row("Card", str(action.card.number))

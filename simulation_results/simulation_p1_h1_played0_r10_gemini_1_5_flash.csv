@@ -1,0 +1,11 @@
+player_cards,other_cards,played_cards,wait_time,model
+"(1,)",1,(),1.0,gemini-1.5-flash
+"(11,)",1,(),2.0,gemini-1.5-flash
+"(21,)",1,(),2.0,gemini-1.5-flash
+"(31,)",1,(),2.0,gemini-1.5-flash
+"(41,)",1,(),2.0,gemini-1.5-flash
+"(51,)",1,(),2.0,gemini-1.5-flash
+"(61,)",1,(),2.0,gemini-1.5-flash
+"(71,)",1,(),2.0,gemini-1.5-flash
+"(81,)",1,(),5.0,gemini-1.5-flash
+"(91,)",1,(),5.0,gemini-1.5-flash

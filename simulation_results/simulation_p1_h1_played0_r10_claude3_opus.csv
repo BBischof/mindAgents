@@ -1,0 +1,11 @@
+player_cards,other_cards,played_cards,wait_time,model
+"(1,)",1,(),6.0,claude-3-opus-20240229
+"(11,)",1,(),6.0,claude-3-opus-20240229
+"(21,)",1,(),6.0,claude-3-opus-20240229
+"(31,)",1,(),10.0,claude-3-opus-20240229
+"(41,)",1,(),10.0,claude-3-opus-20240229
+"(51,)",1,(),15.0,claude-3-opus-20240229
+"(61,)",1,(),5.0,claude-3-opus-20240229
+"(71,)",1,(),7.0,claude-3-opus-20240229
+"(81,)",1,(),30.0,claude-3-opus-20240229
+"(91,)",1,(),12.0,claude-3-opus-20240229
