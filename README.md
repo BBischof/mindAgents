@@ -80,10 +80,10 @@ Then use specific models in your games:
 
 ```bash
 # Run game with specific models for each player
-uv run python -m src.play --models CLAUDE3_SONNET GPT4 GPT35_TURBO
+uv run python -m src.play --models CLAUDE35_HAIKU GEMINI_1_5_FLASH GPT35_TURBO
 
 # Run game with the same model for all players
-uv run python -m src.play --models CLAUDE3_SONNET
+uv run python -m src.play --models CLAUDE35_SONNET
 ```
 
 ## Game Simulator
