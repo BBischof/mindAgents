@@ -14,12 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def parse_tool_arguments(arg_str: str) -> dict:
-    """
-    Parses a function-call style argument string (e.g., "seconds=5, reason='test'")
-    and returns a dictionary of keyword arguments.
-    This function wraps the argument string in a fake function call so that it can be
-    parsed by Python's AST module.
-    """
+    """Parse function-call style argument string into a dict of kwargs."""
     fake_call = "f(" + arg_str + ")"
     try:
         node = ast.parse(fake_call, mode="eval")
@@ -38,23 +33,12 @@ class Gemini(LLM):
     """Gemini integration using the new Model configuration."""
 
     def __init__(self, config: LLMConfig) -> None:
-        """
-        Initialize Gemini integration.
-        Args:
-            config: LLM configuration.
-        """
+        """Initialize Gemini integration."""
         super().__init__(config)
-        # Use the API key from the config and any transport settings.
         genai.configure(api_key=config.api_key, transport="rest")
-        # Note: the model is not created here since the generation configuration (e.g. temperature)
-        # may depend on the prompt template.
 
     async def validate_api_key(self) -> bool:
-        """
-        Validate the API key by making a test request.
-        Returns:
-            bool: True if the API key is valid, False otherwise.
-        """
+        """Validate the API key by making a test request."""
         try:
             model = genai.GenerativeModel(
                 model_name=self.config.metadata.model_id,
@@ -71,19 +55,7 @@ class Gemini(LLM):
         template: PromptTemplate,
         dynamic_content: dict[str, Any],
     ) -> Response:
-        """
-        Generate a response from Gemini using the new model configuration.
-        The prompt is built from the provided template and dynamic content.
-        Depending on the model:
-          - For Gemini 1.5 models: a separate tool_config argument is passed to force a function call
-            (using ANY mode with allowed_function_names derived from the available tools).
-          - For Gemini 2.0 models: explicit prompt instructions are appended to force a tool call.
-        Args:
-            template: The prompt template containing components, tools, and configuration.
-            dynamic_content: Values to fill placeholders in the template.
-        Returns:
-            Response: Generated response with optional tool call information.
-        """
+        """Generate a response from Gemini using the provided template and content."""
         try:
             generation_params: dict[str, Any] = {"temperature": template.temperature}
             if self.config.max_tokens is not None:
