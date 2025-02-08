@@ -54,22 +54,22 @@ You can specify which model each player should use when running the game. To see
 
 ```bash
 # List all available models
-python -m src.play --list-models
+uv run python -m src.play --list-models
 # or for the simulator
-python -m src.core.simulator --list-models
+uv run python -m src.core.simulator --list-models
 ```
 
 Then use specific models in your games:
 
 ```bash
 # Run game with specific models for each player
-python -m src.play --models CLAUDE3_SONNET GPT4 GPT35
+uv run python -m src.play --models CLAUDE3_SONNET GPT4 GPT35
 
 # Run game with the same model for all players
-python -m src.play --models CLAUDE3_SONNET
+uv run python -m src.play --models CLAUDE3_SONNET
 
 # Run simulator with a specific model
-python -m src.core.simulator -p 1 -o 1 -l 0 -m GPT4
+uv run python -m src.core.simulator -p 1 -o 1 -l 0 -m GPT4
 ```
 
 The game will display which model is controlling each player and track their individual performance statistics.
@@ -80,7 +80,7 @@ The game will display which model is controlling each player and track their ind
 2. Create a Python virtual environment
 3. Install requirements:
    ```bash
-   pip install -r requirements.txt
+   uv pip install -r requirements.txt
    ```
 4. Set up your API keys in `~/.config/llm_keys/config.json`:
    ```json
@@ -110,10 +110,10 @@ This allows for analysis of different models' performance and strategies.
 
 ```bash
 # Run the standard game
-python -m src.play
+uv run python -m src.play
 
 # Run with verbose output
-python -m src.play -v
+uv run python -m src.play -v
 ```
 
 ## Game Simulator
@@ -131,14 +131,14 @@ The simulator allows testing specific game scenarios to analyze the AI's decisio
 
 ```bash
 # Basic simulation with default parameters
-python -m src.core.simulator
+uv run python -m src.core.simulator
 
 # Specify parameters:
 # -p: Number of cards the player has
 # -o: Number of cards held by other players
 # -l: Number of played cards to consider
 # -v: Verbose output
-python -m src.core.simulator -p 2 -o 3 -l 1
+uv run python -m src.core.simulator -p 2 -o 3 -l 1
 ```
 
 ### Simulation Parameters
@@ -168,15 +168,15 @@ python -m src.core.simulator -p 2 -o 3 -l 1
 # - 1 card has been played
 # - Using resolution of 3 (cards spaced by 3)
 # - Using GPT-4 model
-python -m src.core.simulator -p 2 -o 3 -l 1 -r 3 -m GPT4
+uv run python -m src.core.simulator -p 2 -o 3 -l 1 -r 3 -m GPT4
 
 # Results will be saved to: simulation_p2_h3_played1_r3_gpt4.csv
 
 # List available models
-python -m src.core.simulator --list-models
+uv run python -m src.core.simulator --list-models
 
 # Run with default parameters (GPT3.5)
-python -m src.core.simulator
+uv run python -m src.core.simulator
 ```
 
 ### Output Format
