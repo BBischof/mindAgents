@@ -12,32 +12,58 @@ The Mind is a cooperative card game where players must play their cards in ascen
 - Bonus lives awarded at specific rounds
 - Star power for revealing cards
 - Auto-play system for maintaining game flow
-
-## Game Simulator
-
-The simulator allows you to test different scenarios and analyze AI behavior in specific game situations.
-
-### Features
 - Test specific card combinations
 - Analyze AI decision-making
 - Track statistics for each player
 - Compare different model behaviors
 
-### Parameters
-- `-p/--player-cards`: Number of cards each player has
-- `-o/--other-cards`: Number of cards held by other players
-- `-l/--played-cards`: Number of cards already played
-- `-m/--model`: Model to use for the test player
+## Project Structure
+
+The project is organized into the following main components:
+
+```
+src/
+├── core/                    # Core game logic
+│   ├── game.py             # Game mechanics and state
+│   ├── display.py          # Display utilities
+│   └── simulator.py        # Game simulation tools
+│
+├── llm/                    # LLM integration
+│   ├── providers/          # LLM providers
+│   │   ├── anthropic.py    # Claude integration
+│   │   ├── openai.py       # GPT integration
+│   │   └── google.py       # Gemini integration
+│   ├── prompts/           # LLM prompts
+│   │   └── wait_n_seconds_prompts.py
+│   ├── types.py           # Type definitions
+│   └── utilities.py       # LLM utilities
+│
+└── play.py               # Main entry point
+```
 
 ## Model Selection
 
 The game supports multiple AI models that can be assigned to different players. Each model may have different strategies and behaviors.
 
 ### Available Models
-- CLAUDE3_SONNET: Claude 3 Sonnet model (default)
-- GPT4: GPT-4 model
-- GPT35: GPT-3.5 model
-- (Other models as defined in `types.py`)
+- OpenAI Models:
+  - GPT4: GPT-4 (8k context)
+  - GPT4_TURBO: GPT-4 Turbo (latest function-calling enabled)
+  - GPT35_TURBO: GPT-3.5 Turbo (4k context)
+  - GPT_O1: OpenAI o1 reasoning model
+  - GPT_O3_MINI: OpenAI o3-mini model
+
+- Anthropic Models:
+  - CLAUDE3_OPUS: Claude 3 Opus model
+  - CLAUDE3_SONNET: Claude 3 Sonnet model
+  - CLAUDE3_HAIKU: Claude 3 Haiku model
+  - CLAUDE35_SONNET: Claude 3.5 Sonnet model
+  - CLAUDE35_HAIKU: Claude 3.5 Haiku model
+
+- Google Models:
+  - GEMINI_1_5_FLASH: Gemini 1.5 Flash model
+  - GEMINI_1_5_PRO: Gemini 1.5 Pro model
+  - GEMINI_2_0_FLASH: Gemini 2.0 Flash model
 
 ### Using Different Models
 
@@ -45,125 +71,42 @@ You can specify which model each player should use when running the game. To see
 
 ```bash
 # List all available models
-python -m src.mind_agents.play_the_mind --list-models
+uv run python -m src.play --list-models
 # or for the simulator
-python -m src.mind_agents.mind_simulator --list-models
+uv run python -m src.core.simulator --list-models
 ```
 
 Then use specific models in your games:
 
 ```bash
 # Run game with specific models for each player
-python -m src.mind_agents.play_the_mind --models CLAUDE3_SONNET GPT4 GPT35
+uv run python -m src.play --models CLAUDE35_HAIKU GEMINI_1_5_FLASH GPT35_TURBO
 
 # Run game with the same model for all players
-python -m src.mind_agents.play_the_mind --models CLAUDE3_SONNET
-
-# Run simulator with a specific model
-python -m src.mind_agents.mind_simulator -p 1 -o 1 -l 0 -m GPT4
-```
-
-The game will display which model is controlling each player and track their individual performance statistics.
-
-## Installation and Requirements
-
-1. Clone the repository
-2. Create a Python virtual environment
-3. Install requirements:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Set up your API keys in `~/.config/llm_keys/config.json`
-
-## Output Format
-
-The game provides detailed output including:
-- Current game state
-- Player actions and decisions
-- Card plays and their outcomes
-- Star power usage
-- End-game statistics for each player/model
-
-### Player Statistics
-For each player, the game tracks:
-- Number of cards successfully played
-- Number of times they attempted to use a star
-- Number of lives they cost the team
-
-This allows for analysis of different models' performance and strategies.
-
-```bash
-# Run the standard game
-uv run python -m src.mind_agents.play_the_mind
-
-# Run with verbose output
-uv run python -m src.mind_agents.play_the_mind -v
+uv run python -m src.play --models CLAUDE35_SONNET
 ```
 
 ## Game Simulator
 
 The simulator allows testing specific game scenarios to analyze the AI's decision-making. This simple benchmark can be used to evaluate the performance of different AI models.
 
-### Simulator Features
+### Simulator Parameters
+- `-p/--player-cards`: Number of cards each player has (must be ≥ 1)
+- `-o/--other-cards`: Number of cards held by other players (must be ≥ 1)
+- `-l/--played-cards`: Number of cards already played (must be ≥ 0)
+- `-r/--resolution`: Space between consecutive card values (must be ≥ 1)
+- `-m/--model`: Model to use for the test player
 
-- Test specific card combinations
-- Control number of cards held by other players
-- Specify previously played cards
-- Generate comprehensive test data
-
-### Running Simulations
-
+Example simulator usage:
 ```bash
-# Basic simulation with default parameters
-uv run python -m src.mind_agents.mind_simulator
+# Run simulator with specific parameters
+uv run python -m src.core.simulator -p 1 -o 1 -l 0 -m GPT4
 
-# Specify parameters:
-# -p: Number of cards the player has
-# -o: Number of cards held by other players
-# -l: Number of played cards to consider
-# -v: Verbose output
-uv run python -m src.mind_agents.mind_simulator -p 2 -o 3 -l 1
+# Test more complex scenarios
+uv run python -m src.core.simulator -p 2 -o 3 -l 1 -r 3 -m GPT4
 ```
 
-### Simulation Parameters
-
-- `player_cards (-p)`: Number of cards the test player has
-  - Must be ≥ 1
-  - Will test all possible combinations of cards
-- `other_cards (-o)`: Number of cards held by other players
-  - Must be ≥ 1 (game logic requires at least one other card in play)
-- `played_cards (-l)`: Number of cards already played
-  - Must be ≥ 0
-  - Will test all valid combinations of played cards
-- `resolution (-r)`: Space between consecutive card values
-  - Must be ≥ 1
-  - Higher values reduce the number of combinations tested
-  - Example: resolution=3 will use cards 1,4,7,10,...
-- `model (-m)`: Model to use for decision making
-  - Defaults to GPT35
-  - Use `--list-models` to see available options
-
-### Example Usage
-
-```bash
-# Test scenarios where:
-# - Player has 2 cards
-# - Other players have 3 cards total
-# - 1 card has been played
-# - Using resolution of 3 (cards spaced by 3)
-# - Using GPT-4 model
-python -m src.mind_agents.mind_simulator -p 2 -o 3 -l 1 -r 3 -m GPT4
-
-# Results will be saved to: simulation_p2_h3_played1_r3_gpt4.csv
-
-# List available models
-python -m src.mind_agents.mind_simulator --list-models
-
-# Run with default parameters (GPT3.5)
-python -m src.mind_agents.mind_simulator
-```
-
-### Output Format
+### Simulation Output
 
 The simulator generates CSV files with the naming format:
 ```
@@ -193,3 +136,7 @@ uv pip install -r requirements.txt
   - rich: For beautiful terminal output
   - pandas: For data handling in simulator
   - tqdm: For progress bars
+
+## API Keys
+
+Set up your API keys in `~/.config/llm_keys/config.json` for the LLM providers you plan to use (OpenAI, Anthropic, Google).

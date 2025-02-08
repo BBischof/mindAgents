@@ -1,0 +1,11 @@
+player_cards,other_cards,played_cards,wait_time,model
+"(1,)",1,(),1.0,claude-3-5-sonnet-20240620
+"(11,)",1,(),7.0,claude-3-5-sonnet-20240620
+"(21,)",1,(),10.0,claude-3-5-sonnet-20240620
+"(31,)",1,(),15.0,claude-3-5-sonnet-20240620
+"(41,)",1,(),20.0,claude-3-5-sonnet-20240620
+"(51,)",1,(),15.0,claude-3-5-sonnet-20240620
+"(61,)",1,(),30.0,claude-3-5-sonnet-20240620
+"(71,)",1,(),35.0,claude-3-5-sonnet-20240620
+"(81,)",1,(),40.0,claude-3-5-sonnet-20240620
+"(91,)",1,(),60.0,claude-3-5-sonnet-20240620

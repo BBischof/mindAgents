@@ -2,8 +2,11 @@
 
 import random
 from dataclasses import dataclass, field
+from typing import Any
 
-from mind_agents.prompt_assets.types import Card, Model
+from llm.prompts.wait_n_seconds_prompts import play_game_template
+from llm.types import Card
+from llm.utilities import generate_play_content
 
 
 @dataclass
@@ -13,6 +16,67 @@ class PlayerStats:
     cards_played: int = 0
     star_attempts: int = 0
     lives_lost: int = 0
+
+
+@dataclass
+class PlayerAction:
+    """Represents a player's intended action."""
+
+    player_id: int
+    card: Card
+    wait_time: float
+    reason: str
+    random_tiebreaker: float = field(default_factory=lambda: random.random())
+
+
+@dataclass
+class GameStateInfo:
+    """Encapsulates game state information needed for prompts and display."""
+
+    card: Card
+    num_players: int
+    total_other_cards: int
+    all_cards: list[int]
+    played_cards: list[int]
+    dynamic_content: dict[str, Any]
+    prompt_messages: list[dict[str, Any]]
+
+    @classmethod
+    def from_game_state(cls, game: "GameState", player_id: int, card: Card) -> "GameStateInfo":
+        """Create GameStateInfo from a game state.
+
+        Args:
+            game: Current game state
+            player_id: ID of the player
+            card: Card being played
+
+        Returns:
+            GameStateInfo containing all calculated information
+        """
+        player = game.players[player_id - 1]
+        all_cards = sorted([c.number for c in player.hand])
+        other_players = [p for p in game.players if p.hand and p.id != player_id]
+        total_other_cards = sum(len(p.hand) for p in other_players)
+
+        # Generate content and prompt
+        dynamic_content = generate_play_content(
+            card_number=card.number,
+            num_players=len(game.players),
+            total_other_cards=total_other_cards,
+            all_cards=all_cards,
+            played_cards=game.played_cards,
+        )
+        prompt_messages = play_game_template.construct_prompt(dynamic_content)
+
+        return cls(
+            card=card,
+            num_players=len(game.players),
+            total_other_cards=total_other_cards,
+            all_cards=all_cards,
+            played_cards=game.played_cards,
+            dynamic_content=dynamic_content,
+            prompt_messages=prompt_messages,
+        )
 
 
 @dataclass
@@ -28,17 +92,17 @@ class Player:
 
 @dataclass
 class GameState:
-    """Represents the current state of the game."""
+    """State of a game of The Mind."""
 
     num_players: int
     current_round: int = 1
     players: list[Player] = field(default_factory=list)
     played_cards: list[int] = field(default_factory=list)
-    stars_remaining: int = 1  # Start with 1 star, can be adjusted
-    lives_remaining: int = 3  # Start with 3 lives, can be adjusted
+    lives: int = field(default=3)
+    stars: int = field(default=1)
     deck: list[int] = field(default_factory=list)  # List of available cards
     player_stats: list[PlayerStats] = field(default_factory=list)  # Stats for each player
-    player_models: list[Model] = field(default_factory=list)  # Models used by each player
+    player_models: list[str] = field(default_factory=list)  # Changed from Model to str - Models used by each player
     cards_per_player: int = field(default=0)  # Number of cards per player in current round
 
     def __post_init__(self) -> None:
@@ -110,7 +174,7 @@ class GameState:
         Side effects:
             - Removes the card from the player's hand if played
             - Adds the card to played_cards if valid
-            - Updates lives_remaining if invalid
+            - Updates lives if invalid
             - Auto-plays all lower cards if invalid
         """
         # Check if game is already over
@@ -120,7 +184,7 @@ class GameState:
         # Verify it's a valid play
         if self.played_cards and card.number <= self.played_cards[-1]:
             # Invalid play - lose one life
-            self.lives_remaining -= 1
+            self.lives -= 1
 
             # Find all cards that need to be auto-played (all cards lower than the highest played card)
             affected_players = set()
@@ -164,8 +228,8 @@ class GameState:
         Returns:
             bool: True if star was available and used, False otherwise
         """
-        if self.stars_remaining > 0:
-            self.stars_remaining -= 1
+        if self.stars > 0:
+            self.stars -= 1
             return True
         return False
 
@@ -183,7 +247,7 @@ class GameState:
         Returns:
             bool: True if players have lost all lives
         """
-        return self.lives_remaining <= 0
+        return self.lives <= 0
 
     def advance_round(self) -> None:
         """Advance to the next round."""
@@ -195,8 +259,8 @@ class GameState:
         """String representation of the game state."""
         status = [
             f"Round: {self.current_round}",
-            f"Lives: {self.lives_remaining}",
-            f"Stars: {self.stars_remaining}",
+            f"Lives: {self.lives}",
+            f"Stars: {self.stars}",
             f"Played cards: {self.played_cards}",
             "Players:",
         ]
