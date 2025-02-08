@@ -12,6 +12,10 @@ The Mind is a cooperative card game where players must play their cards in ascen
 - Bonus lives awarded at specific rounds
 - Star power for revealing cards
 - Auto-play system for maintaining game flow
+- Test specific card combinations
+- Analyze AI decision-making
+- Track statistics for each player
+- Compare different model behaviors
 
 ## Project Structure
 
@@ -80,7 +84,59 @@ uv run python -m src.play --models CLAUDE3_SONNET GPT4 GPT35_TURBO
 
 # Run game with the same model for all players
 uv run python -m src.play --models CLAUDE3_SONNET
-
-# Run simulator with a specific model
-uv run python -m src.core.simulator -p 1 -o 1 -l 0 -m GPT4
 ```
+
+## Game Simulator
+
+The simulator allows testing specific game scenarios to analyze the AI's decision-making. This simple benchmark can be used to evaluate the performance of different AI models.
+
+### Simulator Parameters
+- `-p/--player-cards`: Number of cards each player has (must be ≥ 1)
+- `-o/--other-cards`: Number of cards held by other players (must be ≥ 1)
+- `-l/--played-cards`: Number of cards already played (must be ≥ 0)
+- `-r/--resolution`: Space between consecutive card values (must be ≥ 1)
+- `-m/--model`: Model to use for the test player
+
+Example simulator usage:
+```bash
+# Run simulator with specific parameters
+uv run python -m src.core.simulator -p 1 -o 1 -l 0 -m GPT4
+
+# Test more complex scenarios
+uv run python -m src.core.simulator -p 2 -o 3 -l 1 -r 3 -m GPT4
+```
+
+### Simulation Output
+
+The simulator generates CSV files with the naming format:
+```
+simulation_p{player_cards}_h{other_cards}_played{played_cards}_r{resolution}_{model}.csv
+```
+
+Each CSV contains:
+- `player_cards`: Tuple of cards the player has
+- `other_cards`: Number of cards held by others
+- `played_cards`: Tuple of cards already played
+- `wait_time`: The AI's decided wait time before playing
+- `model`: The model used for decision making
+
+## Installation
+
+1. Clone the repository
+2. Create a Python virtual environment
+3. Install dependencies:
+```bash
+uv pip install -r requirements.txt
+```
+
+## Requirements
+
+- Python 3.11+
+- Dependencies listed in requirements.txt:
+  - rich: For beautiful terminal output
+  - pandas: For data handling in simulator
+  - tqdm: For progress bars
+
+## API Keys
+
+Set up your API keys in `~/.config/llm_keys/config.json` for the LLM providers you plan to use (OpenAI, Anthropic, Google).
