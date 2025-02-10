@@ -1,6 +1,8 @@
-# The Mind - AI Card Game
+# Mind Agents
 
 A Python implementation of The Mind card game where AI agents collaborate to play cards in ascending order without communication.
+
+![Mind Agents](mind_agents.jpg)
 
 ## Game Overview
 

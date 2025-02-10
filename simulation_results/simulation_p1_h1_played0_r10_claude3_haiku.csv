@@ -1,4 +1,4 @@
-player_cards,other_cards,played_cards,wait_time,model
+player_cards,other_cards,played_cards,wait_time,model_name
 "(1,)",1,(),1.0,claude-3-haiku-20240307
 "(11,)",1,(),5.0,claude-3-haiku-20240307
 "(21,)",1,(),5.0,claude-3-haiku-20240307
