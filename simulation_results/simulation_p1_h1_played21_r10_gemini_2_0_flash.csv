@@ -1,0 +1,8 @@
+player_cards,other_cards,played_cards,wait_time,model_name
+"(31,)",1,"(21,)",2.0,GEMINI_2_0_FLASH
+"(41,)",1,"(21,)",4.0,GEMINI_2_0_FLASH
+"(51,)",1,"(21,)",4.0,GEMINI_2_0_FLASH
+"(61,)",1,"(21,)",4.0,GEMINI_2_0_FLASH
+"(71,)",1,"(21,)",4.0,GEMINI_2_0_FLASH
+"(81,)",1,"(21,)",7.0,GEMINI_2_0_FLASH
+"(91,)",1,"(21,)",5.0,GEMINI_2_0_FLASH

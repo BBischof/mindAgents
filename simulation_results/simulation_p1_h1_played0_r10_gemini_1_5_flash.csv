@@ -1,4 +1,4 @@
-player_cards,other_cards,played_cards,wait_time,model
+player_cards,other_cards,played_cards,wait_time,model_name
 "(1,)",1,(),1.0,gemini-1.5-flash
 "(11,)",1,(),2.0,gemini-1.5-flash
 "(21,)",1,(),2.0,gemini-1.5-flash

@@ -5,7 +5,7 @@ import asyncio
 from dataclasses import dataclass
 from itertools import combinations
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 import pandas as pd
 from core.game import GameState
@@ -106,7 +106,7 @@ def get_ordered_tuples(size: int, max_val: int = 100, resolution: int = 1) -> li
 async def run_simulations(
     player_cards: int = 1,
     other_cards: int = 1,
-    played_cards: int = 0,
+    played_cards: Union[int, list[int]] = 0,
     model_name: str = "CLAUDE3_SONNET",
     max_val: int = 100,
     resolution: int = 1,
@@ -116,7 +116,7 @@ async def run_simulations(
     Args:
         player_cards: Number of cards each player has
         other_cards: Number of cards held by other players
-        played_cards: Number of cards already played
+        played_cards: List of specific cards already played or number of cards to simulate
         model_name: Name of the model to use for decision making
         max_val: Maximum card value
         resolution: Space between consecutive card values
@@ -133,34 +133,45 @@ async def run_simulations(
 
     # Generate all possible combinations
     player_card_combos = get_ordered_tuples(player_cards, max_val, resolution)
-    played_card_combos: list[tuple[int, ...]] = (
-        [()]
-        if isinstance(played_cards, int) and played_cards == 0
-        else get_ordered_tuples(played_cards, max_val, resolution)
-    )
+
+    # Handle played cards based on input type
+    if isinstance(played_cards, list):
+        played_card_combos: list[tuple[int, ...]] = [()] if not played_cards else [tuple(sorted(played_cards))]
+    else:
+        played_card_combos = [()] if played_cards == 0 else get_ordered_tuples(played_cards, max_val, resolution)
 
     results: list[SimulationResult] = []
-    total_scenarios = len(player_card_combos) * len(played_card_combos)
+
+    # Filter and count valid scenarios
+    valid_scenarios = []
+    for p_cards in player_card_combos:
+        for p_played in played_card_combos:
+            # Skip if any player card is less than or equal to max played card
+            max_played_current = max(p_played) if p_played else 0
+            if all(card > max_played_current for card in p_cards):
+                valid_scenarios.append((p_cards, p_played))
+
+    total_scenarios = len(valid_scenarios)
+    print(f"\nFound {total_scenarios} valid scenarios (filtered out scenarios where player cards ≤ max played card)")
 
     with tqdm(total=total_scenarios, desc="Running simulations") as pbar:
-        for p_cards in player_card_combos:
-            for p_played in played_card_combos:
-                wait_time = await run_test_scenario(
-                    player_cards=list(p_cards),
+        for p_cards, p_played in valid_scenarios:
+            wait_time = await run_test_scenario(
+                player_cards=list(p_cards),
+                other_cards=other_cards,
+                played_cards=list(p_played),
+                model_name=model_name,
+            )
+            results.append(
+                SimulationResult(
+                    player_cards=p_cards,
                     other_cards=other_cards,
-                    played_cards=list(p_played),
+                    played_cards=p_played,
+                    wait_time=wait_time if wait_time is not None else float("nan"),
                     model_name=model_name,
                 )
-                results.append(
-                    SimulationResult(
-                        player_cards=p_cards,
-                        other_cards=other_cards,
-                        played_cards=p_played,
-                        wait_time=wait_time if wait_time is not None else float("nan"),
-                        model_name=model_name,
-                    )
-                )
-                pbar.update(1)
+            )
+            pbar.update(1)
 
     # Convert results to DataFrame
     df = pd.DataFrame([vars(r) for r in results])
@@ -168,9 +179,14 @@ async def run_simulations(
     # Save results
     output_dir = Path("simulation_results")
     output_dir.mkdir(exist_ok=True)
+
+    # Format played cards for filename
+    played_str = (
+        f"played{'_'.join(str(x) for x in played_cards)}" if isinstance(played_cards, list) else f"played{played_cards}"
+    )
+
     output_path = (
-        output_dir
-        / f"simulation_p{player_cards}_h{other_cards}_played{played_cards}_r{resolution}_{model_name.lower()}.csv"
+        output_dir / f"simulation_p{player_cards}_h{other_cards}_{played_str}_r{resolution}_{model_name.lower()}.csv"
     )
     df.to_csv(output_path, index=False)
     print(f"\nResults saved to {output_path}")
@@ -183,7 +199,19 @@ async def main() -> None:
     parser = argparse.ArgumentParser(description="Run The Mind game simulations")
     parser.add_argument("-p", "--player-cards", type=int, default=1, help="Number of cards each player has")
     parser.add_argument("-o", "--other-cards", type=int, default=1, help="Number of cards held by other players")
-    parser.add_argument("-l", "--played-cards", type=int, default=0, help="Number of cards already played")
+
+    # Create a mutually exclusive group for played cards options
+    played_cards_group = parser.add_mutually_exclusive_group()
+    played_cards_group.add_argument(
+        "-l",
+        "--played-cards-list",
+        type=lambda x: [int(i) for i in x.split(",")],
+        help="Comma-separated list of specific played cards (e.g., '1,4,7' or '3')",
+    )
+    played_cards_group.add_argument(
+        "-n", "--num-played-cards", type=int, default=0, help="Number of played cards to simulate"
+    )
+
     parser.add_argument("-r", "--resolution", type=int, default=1, help="Space between consecutive card values")
     parser.add_argument("-m", "--model", type=str, choices=list(MODELS.keys()), default="GPT35_TURBO")
     parser.add_argument("-v", "--verbose", action="store_true", help="Show detailed output")
@@ -196,11 +224,14 @@ async def main() -> None:
             print(f"- {model_name}")
         return
 
+    # Determine played cards value
+    played_cards = args.played_cards_list if args.played_cards_list is not None else args.num_played_cards
+
     # Run simulations
     df = await run_simulations(
         player_cards=args.player_cards,
         other_cards=args.other_cards,
-        played_cards=args.played_cards,
+        played_cards=played_cards,
         model_name=args.model,
         resolution=args.resolution,
     )

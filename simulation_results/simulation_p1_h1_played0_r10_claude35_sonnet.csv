@@ -1,4 +1,4 @@
-player_cards,other_cards,played_cards,wait_time,model
+player_cards,other_cards,played_cards,wait_time,model_name
 "(1,)",1,(),1.0,claude-3-5-sonnet-20240620
 "(11,)",1,(),7.0,claude-3-5-sonnet-20240620
 "(21,)",1,(),10.0,claude-3-5-sonnet-20240620

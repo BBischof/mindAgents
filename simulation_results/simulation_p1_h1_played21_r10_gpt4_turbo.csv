@@ -1,0 +1,8 @@
+player_cards,other_cards,played_cards,wait_time,model_name
+"(31,)",1,"(21,)",10.0,GPT4_TURBO
+"(41,)",1,"(21,)",20.0,GPT4_TURBO
+"(51,)",1,"(21,)",30.0,GPT4_TURBO
+"(61,)",1,"(21,)",20.0,GPT4_TURBO
+"(71,)",1,"(21,)",30.0,GPT4_TURBO
+"(81,)",1,"(21,)",30.0,GPT4_TURBO
+"(91,)",1,"(21,)",30.0,GPT4_TURBO
