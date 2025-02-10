@@ -2,6 +2,8 @@
 
 A Python implementation of The Mind card game where AI agents collaborate to play cards in ascending order without communication.
 
+![Mind Agents](mind_agents.jpg)
+
 ## Game Overview
 
 The Mind is a cooperative card game where players must play their cards in ascending order without any verbal communication. In this implementation, AI agents take on the role of players, using sophisticated language models to make decisions about when to play their cards.
