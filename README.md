@@ -246,6 +246,17 @@ Each CSV contains:
 ```bash
 uv pip install -r requirements.txt
 ```
+4. Configure your API keys:
+   - Create a file at `~/.config/llm_keys/config.json`
+   - Add your API keys in the following format:
+```json
+{
+    "openai_api_key": "your-openai-key",
+    "anthropic_api_key": "your-anthropic-key",
+    "google_api_key": "your-google-key"
+}
+```
+   Note: You only need to add the API keys for the models you plan to use. The code will check for required keys based on the models you select.
 
 ## Requirements
 
@@ -254,10 +265,6 @@ uv pip install -r requirements.txt
   - rich: For beautiful terminal output
   - pandas: For data handling in simulator
   - tqdm: For progress bars
-
-## API Keys
-
-Set up your API keys in `~/.config/llm_keys/config.json` for the LLM providers you plan to use (OpenAI, Anthropic, Google).
 
 ## License
 
