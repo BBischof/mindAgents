@@ -1,0 +1,6 @@
+player_cards,other_cards,played_cards,wait_time,model_name
+"(1,)",1,(),1.0,CLAUDE35_SONNET
+"(21,)",1,(),10.0,CLAUDE35_SONNET
+"(41,)",1,(),20.0,CLAUDE35_SONNET
+"(61,)",1,(),30.0,CLAUDE35_SONNET
+"(81,)",1,(),40.0,CLAUDE35_SONNET
