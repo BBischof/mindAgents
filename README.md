@@ -41,7 +41,7 @@ This is great, and makes the game fun – trust me, this game is _very fun._
 
 There've been a lot of excitement about the intersection of game-playing and LLM's:
 
-<blockquote class="twitter-tweet"><p lang="en" dir="ltr">I quite like the idea using games to evaluate LLMs against each other, instead of fixed evals. Playing against another intelligent entity self-balances and adapts difficulty, so each eval (/environment) is leveraged a lot more. There&#39;s some early attempts around. Exciting area. <a href="https://t.co/5LWU1zArQQ">https://t.co/5LWU1zArQQ</a></p>&mdash; Andrej Karpathy (@karpathy) <a href="https://twitter.com/karpathy/status/1885740680804504010?ref_src=twsrc%5Etfw">February 1, 2025</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">I quite like the idea using games to evaluate LLMs against each other, instead of fixed evals. Playing against another intelligent entity self-balances and adapts difficulty, so each eval (/environment) is leveraged a lot more. There&#39;s some early attempts around. Exciting area. <a href="https://t.co/5LWU1zArQQ">https://t.co/5LWU1zArQQ</a></p>&mdash; Andrej Karpathy (@karpathy) <a href="https://twitter.com/karpathy/status/1885740680804504010?ref_src=twsrc%5Etfw">February 1, 2025</a></blockquote>
 
 I wanted to understand how AI agents (with limited context) would play this game.
 
