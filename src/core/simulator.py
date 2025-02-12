@@ -136,8 +136,19 @@ async def run_simulations(
 
     # Handle played cards based on input type
     if isinstance(played_cards, list):
-        played_card_combos: list[tuple[int, ...]] = [()] if not played_cards else [tuple(sorted(played_cards))]
+        # Generate all possible combinations of the provided played cards
+        played_cards_sorted = sorted(played_cards)
+        if not played_cards_sorted:
+            played_card_combos: list[tuple[int, ...]] = [()]
+        else:
+            # Validate played cards
+            if any(not 1 <= card <= max_val for card in played_cards_sorted):
+                raise ValueError(f"All played cards must be between 1 and {max_val}")
+            if len(played_cards_sorted) != len(set(played_cards_sorted)):
+                raise ValueError("Duplicate cards in played_cards list")
+            played_card_combos = [tuple(played_cards_sorted)]
     else:
+        # Generate all possible combinations of n played cards
         played_card_combos = [()] if played_cards == 0 else get_ordered_tuples(played_cards, max_val, resolution)
 
     results: list[SimulationResult] = []
@@ -146,13 +157,23 @@ async def run_simulations(
     valid_scenarios = []
     for p_cards in player_card_combos:
         for p_played in played_card_combos:
-            # Skip if any player card is less than or equal to max played card
+            # Skip if any player card is already in played cards
+            if any(card in p_played for card in p_cards):
+                continue
+
+            # Skip if any player card is less than the highest played card
+            # Note: We allow equal values here as they represent different cards
             max_played_current = max(p_played) if p_played else 0
-            if all(card > max_played_current for card in p_cards):
-                valid_scenarios.append((p_cards, p_played))
+            if any(card < max_played_current for card in p_cards):
+                continue
+
+            valid_scenarios.append((p_cards, p_played))
 
     total_scenarios = len(valid_scenarios)
-    print(f"\nFound {total_scenarios} valid scenarios (filtered out scenarios where player cards ≤ max played card)")
+    print(f"\nFound {total_scenarios} valid scenarios")
+    if total_scenarios == 0:
+        print("Warning: No valid scenarios found. This might indicate an issue with the input parameters.")
+        return pd.DataFrame()  # Return empty DataFrame if no valid scenarios
 
     with tqdm(total=total_scenarios, desc="Running simulations") as pbar:
         for p_cards, p_played in valid_scenarios:

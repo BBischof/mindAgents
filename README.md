@@ -2,22 +2,138 @@
 
 A Python implementation of The Mind card game where AI agents collaborate to play cards in ascending order without communication.
 
-![Mind Agents](mind_agents.jpg)
+![Mind Agents](images/mind_agents.jpg)
 
 ## Game Overview
 
 The Mind is a cooperative card game where players must play their cards in ascending order without any verbal communication. In this implementation, AI agents take on the role of players, using sophisticated language models to make decisions about when to play their cards.
 
-### Core Features
-- Multiple AI players working together
-- Lives system for mistakes
-- Bonus lives awarded at specific rounds
-- Star power for revealing cards
-- Auto-play system for maintaining game flow
-- Test specific card combinations
-- Analyze AI decision-making
-- Track statistics for each player
-- Compare different model behaviors
+The basic premise of this collaborative game is that each player is dealt a number of hidden cards with numbers (1-100) on them.
+
+Without communication between players, the goal is for all players to play the cards in order – yes that's right, play the cards in order without communication.
+
+<img src=images/4_cards.jpeg width="600" />
+
+It's probably already obvious, but the main way you "coordinate without communication" is by waiting to play your card.
+
+If you get a low card, you better play it soon, but if you get a high card: sit back, relax.
+
+You're dealt more and more cards as the game progresses, which means you have more things to consider in your own hand, and more importantly: more to consider in other's hands.
+
+Let's have a look at this pair of hands: <img src=images/2_hands_of_2.png width="600" />
+
+if you're holding the (8, 22) you're only focused on the 8, and you have to ask "how likely is it that they have one of the 7 cards lower". If you're on the other side with the 15, you're asking about a 1-in-7 chance that you need to wait before playing the card. [Here's a detailed video of the game](https://www.youtube.com/watch?v=uXl8MC0GMYE)
+
+What's interesting is that there's no time limit to this game – **the tension is purely a construct of the context**.
+One way to play the game would be _every player simply waits N seconds to play their lowest card where N is the number on that card._
+
+So why doesn't this happen? Why is this game interesting _at all._
+
+> Humans behave irrationally.
+
+We fail to count time well, we fail to convince ourselves others will behave the same way, we fail to remain unbiased, and we fail to apply pure rationality to all settings.
+
+This is great, and makes the game fun – trust me, this game is _very fun._
+
+# So AI?
+
+There've been a lot of excitement about the intersection of game-playing and LLM's:
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">I quite like the idea using games to evaluate LLMs against each other, instead of fixed evals. Playing against another intelligent entity self-balances and adapts difficulty, so each eval (/environment) is leveraged a lot more. There&#39;s some early attempts around. Exciting area. <a href="https://t.co/5LWU1zArQQ">https://t.co/5LWU1zArQQ</a></p>&mdash; Andrej Karpathy (@karpathy) <a href="https://twitter.com/karpathy/status/1885740680804504010?ref_src=twsrc%5Etfw">February 1, 2025</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+I wanted to understand how AI agents (with limited context) would play this game.
+
+## Goals
+
+My goals for this assessment were to determine via a couple mechanisms if the agents could:
+1. understand the rules of the game enough to make basic decisions
+2. understand the basic property that higher cards should wait longer to be played
+3. evaluate the agent's awareness of the impact of cards previously played
+
+### Some basic functionality
+
+I also wanted to make a little library to make it easy to watch different agents play one another, so I created a very simple text based UI using [Rich](https://github.com/Textualize/rich).
+
+<img src="images/rich_ui.png" width="600"  />
+
+
+[This library](https://github.com/BBischof/mindAgents) is pretty bare bones; I focused on making it possible for agents to play one another, run simulations to fascilate this analyis, and easy extensibility.
+
+### Prompt Engineering
+
+I *did not* optimize the prompts aggressively; instead, I made it easy for others to add prompt strategies. I used no frameworks to avoid a steep learning curve, and stuck to simple popular templating techniques to update prompting – **Please Send Me Your Pull Requests!**
+
+Here's the prompt:
+```
+
+# System component explaining the game rules and strategy
+system_component = """
+    You are playing The Mind card game.
+    In this game, players must play their cards in ascending order without communicating.
+    You must decide how long to wait before playing your card.
+
+    Key Rules:
+    1. You can only see your own cards
+    2. Cards must be played in ascending order (1-100)
+    3. If a card is played out of order, the team loses a life
+    4. You must choose a wait time based on your card's value and the game state
+
+    Strategy Tips:
+    1. Consider the gap between your card and the last played card:
+    - If your card is close to the last played card, wait less time
+    - If there's a big gap, wait longer to allow others to play
+    2. Account for how many cards other players still have:
+    - More cards = higher chance of lower numbers
+    - Adjust your wait time accordingly
+    3. MOST IMPORTANT: Always wait longer if you think other players might have lower cards!
+
+    You MUST use the wait_for_n_seconds tool to specify your wait time.
+    Do not just describe what you want to do - use the tool to take action.
+    """
+
+# User component for the current game state
+user_component = """
+    There are {num_players} players in the game.
+    Other players have {total_other_cards} cards in total.
+    The following cards have already been played in order: {played_cards}.
+    I have these cards: {all_cards}. I must play my lowest card ({card_number}).
+    What should I do?
+    """
+
+# Define available tools
+TOOLS = [
+        name="wait_for_n_seconds",
+        description="""
+        Wait for N seconds before playing your card. Choose a wait time based on:
+        """,
+        parameters={
+            "reason": {
+                "type": "string",
+                "description": "Brief explanation of why this wait time was chosen",
+            },
+            "seconds": {
+                "type": "integer",
+                "description": "Number of seconds to wait before playing the card",
+            },
+        },
+        required_params=["seconds", "reason"],
+]
+```
+
+A few callouts for those really interested in prompt engineering:
+- I'm using tools to attempt to streamline the output; I expect that not using tools is an interesting and easy experiment.
+- I'm asking for a reason before the wait time; this is basically a trivial CoT that I find fun to look at.
+- I don't tell it the basic strategy!
+- A great experiment to try next would be to tell it how long players waited for previously played cards (grounding).
+
+### This project
+
+Here we have a simple implementation of the Mind game where we have multiple AI players working together. The goal here is to assess models' ability to make cogent decisions about how long to wait before playing a card, and how other game state factors can be used to make decisions.
+
+A few key features:
+- Can simulate games with 2-4 players of potentially different models
+- Simulator to help analyze model decision-making in specific scenarios
+- Easy prompting structure to expand simple implementation
 
 ## Project Structure
 
@@ -93,7 +209,7 @@ uv run python -m src.play --models CLAUDE35_SONNET
 The simulator allows testing specific game scenarios to analyze the AI's decision-making. This simple benchmark can be used to evaluate the performance of different AI models.
 
 ### Simulator Parameters
-- `-p/--player-cards`: Number of cards each player has (must be ≥ 1)
+- `-p/--player-cards`: Number of cards simulated player has (must be ≥ 1)
 - `-o/--other-cards`: Number of cards held by other players (must be ≥ 1)
 - `-l/--played-cards`: Number of cards already played (must be ≥ 0)
 - `-r/--resolution`: Space between consecutive card values (must be ≥ 1)
@@ -142,3 +258,7 @@ uv pip install -r requirements.txt
 ## API Keys
 
 Set up your API keys in `~/.config/llm_keys/config.json` for the LLM providers you plan to use (OpenAI, Anthropic, Google).
+
+## License
+
+This project is licensed under the GNU General Public License version 3. See the [GPL-3.0 license](gpl-3.0.txt) for details.
