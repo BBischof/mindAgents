@@ -271,3 +271,8 @@ uv pip install -r requirements.txt
 ## License
 
 This project is licensed under the GNU General Public License version 3. See the [GPL-3.0 license](gpl-3.0.txt) for details.
+
+## Thank you
+
+- [Andrej Karpathy](https://twitter.com/karpathy) for the inspirational tweet
+- [Hamel Husain](https://twitter.com/hamelhusain), [Greg Kamradt](https://twitter.com/GregKamradt), [Nic Kruchten](https://nicolas.kruchten.com/), and [Eric Vergo](https://www.youtube.com/@evergo) for the helpful feedback.
