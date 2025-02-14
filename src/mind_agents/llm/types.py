@@ -167,12 +167,6 @@ MODELS: dict[str, ModelMetadata] = {
         model_id="gemma2-9b-it",  # "it" likely means Italian, adjust as needed
         context_length=2048,  # Placeholder value
     ),
-    # Hugging Face
-    "DISTIL_WHISPER_LARGET_V3": ModelMetadata(
-        provider="groq",
-        model_id="distil-whisper-large-v3-en",
-        context_length=16384,  # Placeholder value
-    ),
     # Meta
     "LLAMA_3.1_8B": ModelMetadata(
         provider="groq",
