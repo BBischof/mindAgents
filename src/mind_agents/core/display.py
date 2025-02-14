@@ -1,12 +1,12 @@
 """Display utilities for The Mind game."""
 
-import math
-from typing import Optional
-
-from core.game import GameState, GameStateInfo, PlayerAction
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+
+from mind_agents.core.game import GameState, GameStateInfo, PlayerAction
+from typing import Optional
+import math
 
 # Set up rich console for display
 console = Console()

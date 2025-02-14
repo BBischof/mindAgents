@@ -143,22 +143,23 @@ The project is organized into the following main components:
 
 ```
 src/
-├── core/                    # Core game logic
-│   ├── game.py             # Game mechanics and state
-│   ├── display.py          # Display utilities
-│   └── simulator.py        # Game simulation tools
-│
-├── llm/                    # LLM integration
-│   ├── providers/          # LLM providers
-│   │   ├── anthropic.py    # Claude integration
-│   │   ├── openai.py       # GPT integration
-│   │   └── google.py       # Gemini integration
-│   ├── prompts/           # LLM prompts
-│   │   └── wait_n_seconds_prompts.py
-│   ├── types.py           # Type definitions
-│   └── utilities.py       # LLM utilities
-│
-└── play.py               # Main entry point
+└── mind_agents/           # Main package directory
+    ├── core/             # Core game logic
+    │   ├── game.py      # Game mechanics and state
+    │   ├── display.py   # Display utilities
+    │   └── simulator.py # Game simulation tools
+    │
+    ├── llm/             # LLM integration
+    │   ├── providers/   # LLM providers
+    │   │   ├── anthropic.py    # Claude integration
+    │   │   ├── openai.py       # GPT integration
+    │   │   └── google.py       # Gemini integration
+    │   ├── prompts/    # LLM prompts
+    │   │   └── wait_n_seconds_prompts.py
+    │   ├── types.py    # Type definitions
+    │   └── utilities.py # LLM utilities
+    │
+    └── play.py        # Main entry point
 ```
 
 ## Model Selection
@@ -191,19 +192,19 @@ You can specify which model each player should use when running the game. To see
 
 ```bash
 # List all available models
-uv run python -m src.play --list-models
+mind_agents --list-models
 # or for the simulator
-uv run python -m src.core.simulator --list-models
+python -m mind_agents.core.simulator --list-models
 ```
 
 Then use specific models in your games:
 
 ```bash
 # Run game with specific models for each player
-uv run python -m src.play --models CLAUDE35_HAIKU GEMINI_1_5_FLASH GPT35_TURBO
+mind_agents --models CLAUDE35_HAIKU GEMINI_1_5_FLASH GPT35_TURBO
 
 # Run game with the same model for all players
-uv run python -m src.play --models CLAUDE35_SONNET
+mind_agents --models CLAUDE35_SONNET
 ```
 
 ## Game Simulator
@@ -220,10 +221,10 @@ The simulator allows testing specific game scenarios to analyze the AI's decisio
 Example simulator usage:
 ```bash
 # Run simulator with specific parameters
-uv run python -m src.core.simulator -p 1 -o 1 -l 0 -m GPT4
+python -m mind_agents.core.simulator -p 1 -o 1 -l 0 -m GPT4
 
 # Test more complex scenarios
-uv run python -m src.core.simulator -p 2 -o 3 -l 1 -r 3 -m GPT4
+python -m mind_agents.core.simulator -p 2 -o 3 -l 1 -r 3 -m GPT4
 ```
 
 ### Simulation Output

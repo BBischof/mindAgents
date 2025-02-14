@@ -9,11 +9,11 @@ import random
 from pathlib import Path
 from typing import Optional
 
-from core.display import display_game_state, display_player_action
-from core.game import GameState, GameStateInfo, PlayerAction, PlayerStats
-from llm.prompts.wait_n_seconds_prompts import play_game_template
-from llm.types import MODELS, Card
-from llm.utilities import get_llm_client
+from mind_agents.core.display import display_game_state, display_player_action
+from mind_agents.core.game import GameState, GameStateInfo, PlayerAction, PlayerStats
+from mind_agents.llm.prompts.wait_n_seconds_prompts import play_game_template
+from mind_agents.llm.types import MODELS, Card
+from mind_agents.llm.utilities import get_llm_client
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.panel import Panel

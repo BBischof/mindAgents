@@ -8,10 +8,10 @@ from pathlib import Path
 from typing import Optional, Union
 
 import pandas as pd
-from core.game import GameState
-from llm.prompts.wait_n_seconds_prompts import play_game_template
-from llm.types import MODELS, Card
-from llm.utilities import generate_play_content, get_llm_client
+from mind_agents.core.game import GameState
+from mind_agents.llm.prompts.wait_n_seconds_prompts import play_game_template
+from mind_agents.llm.types import MODELS, Card
+from mind_agents.llm.utilities import generate_play_content, get_llm_client
 from tqdm import tqdm
 
 

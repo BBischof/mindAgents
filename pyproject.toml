@@ -19,6 +19,9 @@ dependencies = [
     "httpx>=0.24.0",
 ]
 
+[project.scripts]
+mind_agents = "mind_agents.play:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.4.0",
