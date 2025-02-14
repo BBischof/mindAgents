@@ -100,7 +100,7 @@ class GroqChat(LLM):
                             "parameters": {
                                 "type": "object",
                                 "properties": tool.parameters,
-                                "required": tool.required_parameters,
+                                "required": tool.required_params,
                             },
                         },
                     }
@@ -115,10 +115,23 @@ class GroqChat(LLM):
             # Extract content from response
             content = response.choices[0].message.content
 
+            # Try to parse tool calls from JSON content
+            tool_calls = None
+            try:
+                tool_data = json.loads(content)
+                if isinstance(tool_data, dict):
+                    tool_calls = [{
+                        "tool": tool_data.get("name", ""),
+                        "parameters": tool_data.get("arguments", {})
+                    }]
+            except json.JSONDecodeError:
+                pass
+
             return Response(
                 content=content,
                 raw_response=response.model_dump(),
                 success=True,
+                tool_calls=tool_calls
             )
 
         except Exception as e:
