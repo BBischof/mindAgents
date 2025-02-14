@@ -562,7 +562,8 @@ def display_available_models() -> None:
     console.print(Panel(table, title="[bold blue]The Mind - Model Options[/bold blue]"))
 
 
-if __name__ == "__main__":
+def cli_main():
+    """Entry point for the command-line interface."""
     parser = argparse.ArgumentParser(description="Play The Mind card game")
     parser.add_argument(
         "--models",
@@ -582,7 +583,11 @@ if __name__ == "__main__":
 
     if args.list_models:
         display_available_models()
-        exit(0)
+        return
 
     # Run the game
     asyncio.run(main(verbose=args.verbose, models=args.models, max_turns=args.max_turns))
+
+
+if __name__ == "__main__":
+    cli_main()

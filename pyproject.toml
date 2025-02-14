@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
-mind_agents = "mind_agents.play:main"
+mind_agents = "mind_agents.play:cli_main"
 
 [project.optional-dependencies]
 dev = [
