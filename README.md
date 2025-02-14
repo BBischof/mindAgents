@@ -256,7 +256,8 @@ uv pip install -r requirements.txt
 {
     "openai_api_key": "your-openai-key",
     "anthropic_api_key": "your-anthropic-key",
-    "google_api_key": "your-google-key"
+    "google_api_key": "your-google-key",
+    "groq_api_key": "your-groq-key"
 }
 ```
    Note: You only need to add the API keys for the models you plan to use. The code will check for required keys based on the models you select.
