@@ -250,16 +250,28 @@ Each CSV contains:
 uv pip install -r requirements.txt
 ```
 4. Configure your API keys:
+
+   You can configure your API keys using either environment variables (recommended) or a config file:
+
+   **Option 1: Environment Variables (Recommended)**
+   ```bash
+   export OPENAI_API_KEY="your-openai-key"
+   export ANTHROPIC_API_KEY="your-anthropic-key"
+   export GOOGLE_API_KEY="your-google-key"
+   export GROQ_API_KEY="your-groq-key"
+   ```
+
+   **Option 2: Config File**
    - Create a file at `~/.config/llm_keys/config.json`
    - Add your API keys in the following format:
-```json
-{
-    "openai_api_key": "your-openai-key",
-    "anthropic_api_key": "your-anthropic-key",
-    "google_api_key": "your-google-key",
-    "groq_api_key": "your-groq-key"
-}
-```
+   ```json
+   {
+       "openai_api_key": "your-openai-key",
+       "anthropic_api_key": "your-anthropic-key",
+       "google_api_key": "your-google-key",
+       "groq_api_key": "your-groq-key"
+   }
+   ```
    Note: You only need to add the API keys for the models you plan to use. The code will check for required keys based on the models you select.
 
 ## Requirements

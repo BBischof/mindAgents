@@ -5,6 +5,7 @@ import asyncio
 import json
 import logging
 import math
+import os
 import random
 from pathlib import Path
 from typing import Optional
@@ -36,17 +37,43 @@ game_state_console = Console()
 
 
 def load_config() -> dict[str, str]:
-    """Load API keys from config file.
+    """Load API keys from environment variables or config file.
 
     Returns:
         Dict containing API keys for different providers
 
     Raises:
-        ValueError: If config file not found or has invalid format
+        ValueError: If neither environment variables nor config file are properly set up
     """
+    # First try environment variables
+    config = {}
+    env_keys = {
+        "openai_api_key": "OPENAI_API_KEY",
+        "anthropic_api_key": "ANTHROPIC_API_KEY",
+        "google_api_key": "GOOGLE_API_KEY",
+        "groq_api_key": "GROQ_API_KEY",
+    }
+    
+    # Check if all keys are available in environment
+    all_env_keys_present = True
+    for config_key, env_key in env_keys.items():
+        value = os.getenv(env_key)
+        if value:
+            config[config_key] = value
+        else:
+            all_env_keys_present = False
+            
+    if all_env_keys_present:
+        return config
+            
+    # Fall back to config file if not all environment variables are set
     config_path = Path.home() / ".config" / "llm_keys" / "config.json"
     if not config_path.exists():
-        raise ValueError(f"Config file not found at {config_path}. Please create it with your API keys.")
+        raise ValueError(
+            f"Neither environment variables ({', '.join(env_keys.values())}) "
+            f"nor config file at {config_path} are properly set up. "
+            "Please set environment variables or create config file with your API keys."
+        )
 
     with open(config_path) as f:
         raw_config = json.load(f)
