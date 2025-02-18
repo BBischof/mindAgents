@@ -142,57 +142,57 @@ MODELS: dict[str, ModelMetadata] = {
     "QWEN_2.5_32B": ModelMetadata(
         provider="groq",
         model_id="qwen-2.5-32b",
-        context_length=32768,  # Placeholder value - adjust based on actual API spec
+        context_length=32768,
     ),
     "QWEN_2.5_CODER_32B": ModelMetadata(
         provider="groq",
         model_id="qwen-2.5-coder-32b",
-        context_length=32768,  # Placeholder value
+        context_length=32768,
     ),
     # DeepSeek / Alibaba Cloud
     "DEEPSEEK_QWEN_32B": ModelMetadata(
         provider="groq",
         model_id="deepseek-r1-distill-qwen-32b",
-        context_length=32768,  # Placeholder value
+        context_length=32768,
     ),
     # DeepSeek / Meta
     "DEEPSEEK_LLAMA_70B": ModelMetadata(
         provider="groq",
         model_id="deepseek-r1-distill-llama-70b",
-        context_length=4096,  # Placeholder value
+        context_length=4096,
     ),
     # Google
     "GEMMA_9B": ModelMetadata(
         provider="groq",
-        model_id="gemma2-9b-it",  # "it" likely means Italian, adjust as needed
-        context_length=2048,  # Placeholder value
+        model_id="gemma2-9b",
+        context_length=2048,
     ),
     # Meta
     "LLAMA_3.1_8B": ModelMetadata(
         provider="groq",
         model_id="llama-3.1-8b-instant",
-        context_length=4096,  # Placeholder value
+        context_length=4096,
     ),
     "LLAMA_3.2_11B_VISION": ModelMetadata(
         provider="groq",
         model_id="llama-3.2-11b-vision-preview",
-        context_length=4096,  # Placeholder value
+        context_length=4096,
     ),
     "LLAMA_3.2_90B_VISION": ModelMetadata(
         provider="groq",
         model_id="llama-3.2-90b-vision-preview",
-        context_length=4096,  # Placeholder value
+        context_length=4096,
     ),
     "LLAMA_3.3_70B": ModelMetadata(
         provider="groq",
         model_id="llama-3.3-70b-8192",
-        context_length=8192,  # Placeholder value
+        context_length=8192,
     ),
     # Mistral AI
     "MISTRAL_8X7B": ModelMetadata(
         provider="groq",
         model_id="mixtral-8x7b-32768",
-        context_length=32768,  # Placeholder value
+        context_length=32768,
     ),
 }
 
