@@ -164,17 +164,34 @@ async def get_player_action(
     client = await get_llm_client(model_name)
 
     # Generate response using the template
-    response = await client.generate(
-        template=play_game_template,
-        dynamic_content=state_info.dynamic_content,
-    )
-
-    if not response or not response.tool_calls:
+    try:
+        response = await client.generate(
+            template=play_game_template,
+            dynamic_content=state_info.dynamic_content,
+        )
+    except Exception as e:
         logger.error(
-            f"Failed to get valid response for player {player_id}:\n"
-            f"Response: {response}\n"
+            f"Exception while generating response for player {player_id}:\n"
+            f"Error: {str(e)}\n"
             f"Model: {model_name}\n"
-            f"Game state: {state_info.dynamic_content}"
+            f"Game state: {json.dumps(state_info.dynamic_content, indent=2)}"
+        )
+        return None
+
+    if not response:
+        logger.error(
+            f"Empty response from LLM for player {player_id}:\n"
+            f"Model: {model_name}\n"
+            f"Game state: {json.dumps(state_info.dynamic_content, indent=2)}"
+        )
+        return None
+
+    if not response.tool_calls:
+        logger.error(
+            f"No tool calls in response for player {player_id}:\n"
+            f"Raw response: {response.raw_response if hasattr(response, 'raw_response') else response}\n"
+            f"Model: {model_name}\n"
+            f"Game state: {json.dumps(state_info.dynamic_content, indent=2)}"
         )
         return None
 
@@ -296,9 +313,24 @@ async def play_round(game: GameState, verbose: bool = False) -> None:
                 actions.append(action)
                 display_player_action(action, verbose=verbose, game_state=game)
             else:
-                logger.error(f"Failed to get action for player {player.id}")
+                game_state_info = {
+                    'card_number': card.number,
+                    'num_players': len(game.players),
+                    'total_other_cards': sum(len(p.hand) for p in game.players if p.id != player.id),
+                    'all_cards': [c.number for c in player.hand],
+                    'played_cards': [c.number for c in game.played_cards]
+                }
+                logger.error(
+                    f"Failed to get action for player {player.id}:\n"
+                    f"Model: {player.model}\n"
+                    f"Game state: {json.dumps(game_state_info, indent=2)}\n"
+                    f"This usually means either:\n"
+                    f"1. The LLM failed to generate a response\n"
+                    f"2. The response couldn't be parsed as valid JSON\n"
+                    f"3. The model is not properly configured"
+                )
                 # Exit immediately on player action failure
-                raise RuntimeError(f"Critical error: Failed to get action for player {player.id}")
+                raise RuntimeError(f"Critical error: Failed to get action for player {player.id}. Check logs above for details.")
 
         if not actions:
             logger.error("No valid actions found!")
