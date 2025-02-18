@@ -207,6 +207,40 @@ uv run --active python -m mind_agents.play --models CLAUDE35_HAIKU GEMINI_1_5_FL
 uv run --active python -m mind_agents.play --models CLAUDE35_SONNET
 ```
 
+### Model Configuration
+
+#### Max Tokens Configuration
+
+You can configure the `max_tokens` parameter for each model provider in three ways, listed in order of precedence:
+
+1. Environment Variables (highest priority):
+```bash
+export OPENAI_MAX_TOKENS=1000
+export ANTHROPIC_MAX_TOKENS=2000
+export GOOGLE_MAX_TOKENS=1500
+export GROQ_MAX_TOKENS=2000
+```
+
+2. Config File (medium priority):
+Add to your `~/.config/llm_keys/config.json`:
+```json
+{
+  "openai_api_key": "...",
+  "openai_max_tokens": 1000,
+  "anthropic_api_key": "...",
+  "anthropic_max_tokens": 2000,
+  "google_api_key": "...",
+  "google_max_tokens": 1500,
+  "groq_api_key": "...",
+  "groq_max_tokens": 2000
+}
+```
+
+3. Model Defaults (lowest priority):
+Each model comes with its own default `max_tokens` setting. If no configuration is provided through environment variables or the config file, these defaults will be used.
+
+The configuration with the highest precedence will be used. For example, if you set both an environment variable and a config file value, the environment variable will take precedence.
+
 ## Game Simulator
 
 The simulator allows testing specific game scenarios to analyze the AI's decision-making. This simple benchmark can be used to evaluate the performance of different AI models.
