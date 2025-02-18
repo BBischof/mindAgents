@@ -34,13 +34,14 @@ class ReasoningEffort(str, Enum):
 class ModelMetadata:
     """Metadata for a model."""
 
-    provider: Literal["openai", "anthropic", "google"]
+    provider: Literal["openai", "anthropic", "google", "groq"]
     model_id: str  # The actual model ID to use with the API
     context_length: int
     supports_system_messages: bool = True
     supports_temperature: bool = True
     supports_reasoning_effort: bool = False
     reasoning_effort: Optional[ReasoningEffort] = None  # For O3 models that support reasoning effort
+    default_max_tokens: Optional[int] = None  # Default max_tokens for this model if not overridden
 
 
 # Model metadata mapping
@@ -136,6 +137,53 @@ MODELS: dict[str, ModelMetadata] = {
         provider="google",
         model_id="gemini-2.0-flash-001",
         context_length=32768,
+    ),
+    # Groq models - Production
+    "LLAMA_3.3_70B": ModelMetadata(
+        provider="groq",
+        model_id="llama-3.3-70b-versatile",
+        context_length=128000,
+    ),
+    "LLAMA_3.1_8B": ModelMetadata(
+        provider="groq",
+        model_id="llama-3.1-8b-instant",
+        context_length=128000,
+    ),
+    "GEMMA_9B": ModelMetadata(
+        provider="groq",
+        model_id="gemma2-9b-it",
+        context_length=8192,
+    ),
+    "MIXTRAL_8X7B": ModelMetadata(
+        provider="groq",
+        model_id="mixtral-8x7b-32768",
+        context_length=32768,
+    ),
+    # Groq models - Preview
+    "QWEN_2.5_32B": ModelMetadata(
+        provider="groq",
+        model_id="qwen-2.5-32b",
+        context_length=128000,
+    ),
+    "DEEPSEEK_QWEN_32B": ModelMetadata(
+        provider="groq",
+        model_id="deepseek-r1-distill-qwen-32b",
+        context_length=128000,
+    ),
+    "DEEPSEEK_LLAMA_70B": ModelMetadata(
+        provider="groq",
+        model_id="deepseek-r1-distill-llama-70b",
+        context_length=128000,
+    ),
+    "LLAMA_3.2_11B_VISION": ModelMetadata(
+        provider="groq",
+        model_id="llama-3.2-11b-vision-preview",
+        context_length=128000,
+    ),
+    "LLAMA_3.2_90B_VISION": ModelMetadata(
+        provider="groq",
+        model_id="llama-3.2-90b-vision-preview",
+        context_length=128000,
     ),
 }
 

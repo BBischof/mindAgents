@@ -29,6 +29,7 @@ def load_api_keys() -> dict[str, str]:
         "openai_api_key": "OpenAI",
         "anthropic_api_key": "Anthropic",
         "google_api_key": "Google",
+        "groq_api_key": "Groq",
     }
 
     config: dict[str, str] = {}

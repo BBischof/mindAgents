@@ -143,22 +143,23 @@ The project is organized into the following main components:
 
 ```
 src/
-├── core/                    # Core game logic
-│   ├── game.py             # Game mechanics and state
-│   ├── display.py          # Display utilities
-│   └── simulator.py        # Game simulation tools
-│
-├── llm/                    # LLM integration
-│   ├── providers/          # LLM providers
-│   │   ├── anthropic.py    # Claude integration
-│   │   ├── openai.py       # GPT integration
-│   │   └── google.py       # Gemini integration
-│   ├── prompts/           # LLM prompts
-│   │   └── wait_n_seconds_prompts.py
-│   ├── types.py           # Type definitions
-│   └── utilities.py       # LLM utilities
-│
-└── play.py               # Main entry point
+└── mind_agents/           # Main package directory
+    ├── core/             # Core game logic
+    │   ├── game.py      # Game mechanics and state
+    │   ├── display.py   # Display utilities
+    │   └── simulator.py # Game simulation tools
+    │
+    ├── llm/             # LLM integration
+    │   ├── providers/   # LLM providers
+    │   │   ├── anthropic.py    # Claude integration
+    │   │   ├── openai.py       # GPT integration
+    │   │   └── google.py       # Gemini integration
+    │   ├── prompts/    # LLM prompts
+    │   │   └── wait_n_seconds_prompts.py
+    │   ├── types.py    # Type definitions
+    │   └── utilities.py # LLM utilities
+    │
+    └── play.py        # Main entry point
 ```
 
 ## Model Selection
@@ -191,20 +192,54 @@ You can specify which model each player should use when running the game. To see
 
 ```bash
 # List all available models
-uv run python -m src.play --list-models
+uv run --active python -m mind_agents.play --list-models
 # or for the simulator
-uv run python -m src.core.simulator --list-models
+uv run --active python -m mind_agents.core.simulator --list-models
 ```
 
 Then use specific models in your games:
 
 ```bash
 # Run game with specific models for each player
-uv run python -m src.play --models CLAUDE35_HAIKU GEMINI_1_5_FLASH GPT35_TURBO
+uv run --active python -m mind_agents.play --models CLAUDE35_HAIKU GEMINI_1_5_FLASH GPT35_TURBO
 
 # Run game with the same model for all players
-uv run python -m src.play --models CLAUDE35_SONNET
+uv run --active python -m mind_agents.play --models CLAUDE35_SONNET
 ```
+
+### Model Configuration
+
+#### Max Tokens Configuration
+
+You can configure the `max_tokens` parameter for each model provider in three ways, listed in order of precedence:
+
+1. Environment Variables (highest priority):
+```bash
+export OPENAI_MAX_TOKENS=1000
+export ANTHROPIC_MAX_TOKENS=2000
+export GOOGLE_MAX_TOKENS=1500
+export GROQ_MAX_TOKENS=2000
+```
+
+2. Config File (medium priority):
+Add to your `~/.config/llm_keys/config.json`:
+```json
+{
+  "openai_api_key": "...",
+  "openai_max_tokens": 1000,
+  "anthropic_api_key": "...",
+  "anthropic_max_tokens": 2000,
+  "google_api_key": "...",
+  "google_max_tokens": 1500,
+  "groq_api_key": "...",
+  "groq_max_tokens": 2000
+}
+```
+
+3. Model Defaults (lowest priority):
+Each model comes with its own default `max_tokens` setting. If no configuration is provided through environment variables or the config file, these defaults will be used.
+
+The configuration with the highest precedence will be used. For example, if you set both an environment variable and a config file value, the environment variable will take precedence.
 
 ## Game Simulator
 
@@ -220,10 +255,10 @@ The simulator allows testing specific game scenarios to analyze the AI's decisio
 Example simulator usage:
 ```bash
 # Run simulator with specific parameters
-uv run python -m src.core.simulator -p 1 -o 1 -l 0 -m GPT4
+uv run --active python -m mind_agents.core.simulator -p 1 -o 1 -l 0 -m GPT4
 
 # Test more complex scenarios
-uv run python -m src.core.simulator -p 2 -o 3 -l 1 -r 3 -m GPT4
+uv run --active python -m mind_agents.core.simulator -p 2 -o 3 -l 1 -r 3 -m GPT4
 ```
 
 ### Simulation Output
@@ -243,26 +278,49 @@ Each CSV contains:
 ## Installation
 
 1. Clone the repository
-2. Create a Python virtual environment
-3. Install dependencies:
+2. Install uv (if not already installed):
 ```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+3. Create a virtual environment and install dependencies:
+```bash
+# Create and activate a new virtual environment
+uv venv
+source .venv/bin/activate  # On Unix/macOS
+# OR
+.venv\Scripts\activate  # On Windows
+
+# Install dependencies
 uv pip install -r requirements.txt
 ```
-4. Configure your API keys:
-   - Create a file at `~/.config/llm_keys/config.json`
-   - Add your API keys in the following format:
-```json
-{
-    "openai_api_key": "your-openai-key",
-    "anthropic_api_key": "your-anthropic-key",
-    "google_api_key": "your-google-key"
-}
+
+## Usage
+
+First, ensure you're in your activated virtual environment. Then you can run commands like:
+
+```bash
+# List all available models
+uv run --active python -m mind_agents.play --list-models
+
+# Run game with specific models for each player
+uv run --active python -m mind_agents.play --models CLAUDE35_HAIKU GEMINI_1_5_FLASH GPT35_TURBO
+
+# Run game with the same model for all players
+uv run --active python -m mind_agents.play --models CLAUDE35_SONNET
+
+# Run simulator with specific parameters
+uv run --active python -m mind_agents.core.simulator -p 1 -o 1 -l 0 -m GPT4
+
+# Test more complex scenarios
+uv run --active python -m mind_agents.core.simulator -p 2 -o 3 -l 1 -r 3 -m GPT4
 ```
-   Note: You only need to add the API keys for the models you plan to use. The code will check for required keys based on the models you select.
+
+Note: The `--active` flag tells uv to use your currently activated virtual environment. Make sure you've activated the environment and installed dependencies before running these commands.
 
 ## Requirements
 
 - Python 3.11+
+- uv: For fast dependency management and virtual environments
 - Dependencies listed in requirements.txt:
   - rich: For beautiful terminal output
   - pandas: For data handling in simulator

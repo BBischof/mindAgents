@@ -5,24 +5,21 @@ import asyncio
 import json
 import logging
 import math
+import os
 import random
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
-from core.display import display_game_state, display_player_action
-from core.game import GameState, GameStateInfo, PlayerAction, PlayerStats
-from llm.prompts.wait_n_seconds_prompts import play_game_template
-from llm.types import MODELS, Card
-from llm.utilities import get_llm_client
-from rich.console import Console
+from mind_agents.core.display import console, display_game_state, display_player_action
+from mind_agents.core.game import GameState, GameStateInfo, PlayerAction, PlayerStats
+from mind_agents.llm.prompts.wait_n_seconds_prompts import play_game_template
+from mind_agents.llm.types import MODELS, Card
+from mind_agents.llm.utilities import get_llm_client
 from rich.logging import RichHandler
 from rich.panel import Panel
 from rich.table import Table
 
-# Set up rich console and logging
-console = Console()
-
-# Configure logging - set httpx to WARNING to hide request logs
+# Set up logging - set httpx to WARNING to hide request logs
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.basicConfig(
     level=logging.INFO,
@@ -32,21 +29,57 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Create a secondary console for the game state that will stay at the top
-game_state_console = Console()
+game_state_console = console
 
 
-def load_config() -> dict[str, str]:
-    """Load API keys from config file.
+def load_config() -> dict[str, Any]:
+    """Load API keys and configuration from environment variables or config file.
 
     Returns:
-        Dict containing API keys for different providers
+        Dict containing API keys and configuration for different providers
 
     Raises:
-        ValueError: If config file not found or has invalid format
+        ValueError: If neither environment variables nor config file are properly set up
     """
+    # First try environment variables
+    config = {}
+    env_keys = {
+        "openai_api_key": "OPENAI_API_KEY",
+        "anthropic_api_key": "ANTHROPIC_API_KEY",
+        "google_api_key": "GOOGLE_API_KEY",
+        "groq_api_key": "GROQ_API_KEY",
+    }
+
+    # Check for max_tokens in environment variables
+    max_tokens_config = {}
+    for provider in ["openai", "anthropic", "google", "groq"]:
+        env_var = f"{provider.upper()}_MAX_TOKENS"
+        value = os.getenv(env_var)
+        if value:
+            try:
+                max_tokens_config[f"{provider}_max_tokens"] = int(value)
+            except ValueError:
+                logger.warning(f"Invalid {env_var} value: {value}. Must be an integer.")
+
+    # Check environment variables and collect whatever is available
+    for config_key, env_key in env_keys.items():
+        value = os.getenv(env_key)
+        if value:
+            config[config_key] = value
+
+    # If we have at least one key from environment, return what we have plus max_tokens
+    if config:
+        config.update(max_tokens_config)
+        return config
+
+    # Fall back to config file if no environment variables are set
     config_path = Path.home() / ".config" / "llm_keys" / "config.json"
     if not config_path.exists():
-        raise ValueError(f"Config file not found at {config_path}. Please create it with your API keys.")
+        raise ValueError(
+            f"Neither environment variables ({', '.join(env_keys.values())}) "
+            f"nor config file at {config_path} are properly set up. "
+            "Please set environment variables or create config file with your API keys."
+        )
 
     with open(config_path) as f:
         raw_config = json.load(f)
@@ -60,9 +93,10 @@ def load_config() -> dict[str, str]:
             "openai_api_key": "OpenAI",
             "anthropic_api_key": "Anthropic",
             "google_api_key": "Google",
+            "groq_api_key": "Groq",
         }
 
-        config: dict[str, str] = {}
+        config: dict[str, Any] = {}
         for key, provider in required_keys.items():
             if key not in raw_config:
                 raise ValueError(f"Missing {provider} API key in config")
@@ -71,7 +105,38 @@ def load_config() -> dict[str, str]:
                 raise ValueError(f"{provider} API key must be a string")
             config[key] = value
 
+        # Extract optional max_tokens configuration
+        for provider in ["openai", "anthropic", "google", "groq"]:
+            max_tokens_key = f"{provider}_max_tokens"
+            if max_tokens_key in raw_config:
+                try:
+                    config[max_tokens_key] = int(raw_config[max_tokens_key])
+                except (ValueError, TypeError):
+                    logger.warning(f"Invalid {max_tokens_key} in config: {raw_config[max_tokens_key]}. Must be an integer.")
+
         return config
+
+
+def should_award_bonus_life(round_completed: int, num_players: int) -> bool:
+    """Determine if a bonus life should be awarded.
+
+    Args:
+        round_completed: The round that was just completed
+        num_players: Number of players in the game
+
+    Returns:
+        True if a bonus life should be awarded, False otherwise
+    """
+    # Common bonus life rounds for 2-3 players
+    common_rounds = {2, 3, 5, 6, 8, 9}
+
+    # 4-player games also get a bonus life after round 1
+    four_player_rounds = {1} | common_rounds
+
+    if num_players == 4:
+        return round_completed in four_player_rounds
+    else:
+        return round_completed in common_rounds
 
 
 async def get_player_action(
@@ -99,17 +164,34 @@ async def get_player_action(
     client = await get_llm_client(model_name)
 
     # Generate response using the template
-    response = await client.generate(
-        template=play_game_template,
-        dynamic_content=state_info.dynamic_content,
-    )
-
-    if not response or not response.tool_calls:
+    try:
+        response = await client.generate(
+            template=play_game_template,
+            dynamic_content=state_info.dynamic_content,
+        )
+    except Exception as e:
         logger.error(
-            f"Failed to get valid response for player {player_id}:\n"
-            f"Response: {response}\n"
+            f"Exception while generating response for player {player_id}:\n"
+            f"Error: {str(e)}\n"
             f"Model: {model_name}\n"
-            f"Game state: {state_info.dynamic_content}"
+            f"Game state: {json.dumps(state_info.dynamic_content, indent=2)}"
+        )
+        return None
+
+    if not response:
+        logger.error(
+            f"Empty response from LLM for player {player_id}:\n"
+            f"Model: {model_name}\n"
+            f"Game state: {json.dumps(state_info.dynamic_content, indent=2)}"
+        )
+        return None
+
+    if not response.tool_calls:
+        logger.error(
+            f"No tool calls in response for player {player_id}:\n"
+            f"Raw response: {response.raw_response if hasattr(response, 'raw_response') else response}\n"
+            f"Model: {model_name}\n"
+            f"Game state: {json.dumps(state_info.dynamic_content, indent=2)}"
         )
         return None
 
@@ -231,9 +313,24 @@ async def play_round(game: GameState, verbose: bool = False) -> None:
                 actions.append(action)
                 display_player_action(action, verbose=verbose, game_state=game)
             else:
-                logger.error(f"Failed to get action for player {player.id}")
+                game_state_info = {
+                    'card_number': card.number,
+                    'num_players': len(game.players),
+                    'total_other_cards': sum(len(p.hand) for p in game.players if p.id != player.id),
+                    'all_cards': [c.number for c in player.hand],
+                    'played_cards': [c.number for c in game.played_cards]
+                }
+                logger.error(
+                    f"Failed to get action for player {player.id}:\n"
+                    f"Model: {game.player_models[player.id - 1]}\n"
+                    f"Game state: {json.dumps(game_state_info, indent=2)}\n"
+                    f"This usually means either:\n"
+                    f"1. The LLM failed to generate a response\n"
+                    f"2. The response couldn't be parsed as valid JSON\n"
+                    f"3. The model is not properly configured"
+                )
                 # Exit immediately on player action failure
-                raise RuntimeError(f"Critical error: Failed to get action for player {player.id}")
+                raise RuntimeError(f"Critical error: Failed to get action for player {player.id}. Check logs above for details.")
 
         if not actions:
             logger.error("No valid actions found!")
@@ -402,28 +499,6 @@ async def play_round(game: GameState, verbose: bool = False) -> None:
         active_players = [p for p in game.players if p.hand]
 
 
-def should_award_bonus_life(round_completed: int, num_players: int) -> bool:
-    """Determine if a bonus life should be awarded.
-
-    Args:
-        round_completed: The round that was just completed
-        num_players: Number of players in the game
-
-    Returns:
-        True if a bonus life should be awarded, False otherwise
-    """
-    # Common bonus life rounds for 2-3 players
-    common_rounds = {2, 3, 5, 6, 8, 9}
-
-    # 4-player games also get a bonus life after round 1
-    four_player_rounds = {1} | common_rounds
-
-    if num_players == 4:
-        return round_completed in four_player_rounds
-    else:
-        return round_completed in common_rounds
-
-
 async def main(verbose: bool = False, models: Optional[list[str]] = None, max_turns: Optional[int] = None) -> None:
     """Run the game.
 
@@ -547,7 +622,6 @@ async def test_specific_scenario(game_state_json: str, verbose: bool = False) ->
 
 def display_available_models() -> None:
     """Display the list of available models."""
-    console = Console()
     console.print("\n[bold cyan]Available Models:[/bold cyan]")
 
     table = Table(show_header=True)
@@ -562,7 +636,8 @@ def display_available_models() -> None:
     console.print(Panel(table, title="[bold blue]The Mind - Model Options[/bold blue]"))
 
 
-if __name__ == "__main__":
+def cli_main():
+    """Entry point for the command-line interface."""
     parser = argparse.ArgumentParser(description="Play The Mind card game")
     parser.add_argument(
         "--models",
@@ -582,7 +657,11 @@ if __name__ == "__main__":
 
     if args.list_models:
         display_available_models()
-        exit(0)
+        return
 
     # Run the game
     asyncio.run(main(verbose=args.verbose, models=args.models, max_turns=args.max_turns))
+
+
+if __name__ == "__main__":
+    cli_main()
