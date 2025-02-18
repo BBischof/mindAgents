@@ -8,7 +8,7 @@ import math
 import os
 import random
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from mind_agents.core.display import console, display_game_state, display_player_action
 from mind_agents.core.game import GameState, GameStateInfo, PlayerAction, PlayerStats
@@ -30,11 +30,11 @@ logger = logging.getLogger(__name__)
 game_state_console = console
 
 
-def load_config() -> dict[str, str]:
-    """Load API keys from environment variables or config file.
+def load_config() -> dict[str, Any]:
+    """Load API keys and configuration from environment variables or config file.
 
     Returns:
-        Dict containing API keys for different providers
+        Dict containing API keys and configuration for different providers
 
     Raises:
         ValueError: If neither environment variables nor config file are properly set up
@@ -48,14 +48,26 @@ def load_config() -> dict[str, str]:
         "groq_api_key": "GROQ_API_KEY",
     }
 
+    # Check for max_tokens in environment variables
+    max_tokens_config = {}
+    for provider in ["openai", "anthropic", "google", "groq"]:
+        env_var = f"{provider.upper()}_MAX_TOKENS"
+        value = os.getenv(env_var)
+        if value:
+            try:
+                max_tokens_config[f"{provider}_max_tokens"] = int(value)
+            except ValueError:
+                logger.warning(f"Invalid {env_var} value: {value}. Must be an integer.")
+
     # Check environment variables and collect whatever is available
     for config_key, env_key in env_keys.items():
         value = os.getenv(env_key)
         if value:
             config[config_key] = value
 
-    # If we have at least one key from environment, return what we have
+    # If we have at least one key from environment, return what we have plus max_tokens
     if config:
+        config.update(max_tokens_config)
         return config
 
     # Fall back to config file if no environment variables are set
@@ -82,7 +94,7 @@ def load_config() -> dict[str, str]:
             "groq_api_key": "Groq",
         }
 
-        config: dict[str, str] = {}
+        config: dict[str, Any] = {}
         for key, provider in required_keys.items():
             if key not in raw_config:
                 raise ValueError(f"Missing {provider} API key in config")
@@ -91,7 +103,38 @@ def load_config() -> dict[str, str]:
                 raise ValueError(f"{provider} API key must be a string")
             config[key] = value
 
+        # Extract optional max_tokens configuration
+        for provider in ["openai", "anthropic", "google", "groq"]:
+            max_tokens_key = f"{provider}_max_tokens"
+            if max_tokens_key in raw_config:
+                try:
+                    config[max_tokens_key] = int(raw_config[max_tokens_key])
+                except (ValueError, TypeError):
+                    logger.warning(f"Invalid {max_tokens_key} in config: {raw_config[max_tokens_key]}. Must be an integer.")
+
         return config
+
+
+def should_award_bonus_life(round_completed: int, num_players: int) -> bool:
+    """Determine if a bonus life should be awarded.
+
+    Args:
+        round_completed: The round that was just completed
+        num_players: Number of players in the game
+
+    Returns:
+        True if a bonus life should be awarded, False otherwise
+    """
+    # Common bonus life rounds for 2-3 players
+    common_rounds = {2, 3, 5, 6, 8, 9}
+
+    # 4-player games also get a bonus life after round 1
+    four_player_rounds = {1} | common_rounds
+
+    if num_players == 4:
+        return round_completed in four_player_rounds
+    else:
+        return round_completed in common_rounds
 
 
 async def get_player_action(
@@ -420,28 +463,6 @@ async def play_round(game: GameState, verbose: bool = False) -> None:
 
         # Update active players list - only those who still have cards
         active_players = [p for p in game.players if p.hand]
-
-
-def should_award_bonus_life(round_completed: int, num_players: int) -> bool:
-    """Determine if a bonus life should be awarded.
-
-    Args:
-        round_completed: The round that was just completed
-        num_players: Number of players in the game
-
-    Returns:
-        True if a bonus life should be awarded, False otherwise
-    """
-    # Common bonus life rounds for 2-3 players
-    common_rounds = {2, 3, 5, 6, 8, 9}
-
-    # 4-player games also get a bonus life after round 1
-    four_player_rounds = {1} | common_rounds
-
-    if num_players == 4:
-        return round_completed in four_player_rounds
-    else:
-        return round_completed in common_rounds
 
 
 async def main(verbose: bool = False, models: Optional[list[str]] = None, max_turns: Optional[int] = None) -> None:

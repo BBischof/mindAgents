@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 from typing import Any, Optional, cast
+import logging
 
 import tiktoken
 
@@ -13,6 +14,7 @@ from .providers.groq import GroqChat
 from .providers.openai import ChatGPT
 from .types import LLM, LLMConfig, get_model_metadata
 
+logger = logging.getLogger(__name__)
 
 def get_token_count(text: str | list | dict, model: str = "gpt-4") -> int:
     """Count tokens in text using the appropriate encoding for the model.
@@ -115,9 +117,46 @@ async def get_llm_client(model_name: str, api_key: Optional[str] = None) -> LLM:
     implementation = get_model_implementation(model_name)
     if api_key is None:
         api_key = load_api_key(model_name)
+
+    # Get model metadata
+    metadata = get_model_metadata(model_name)
+    provider = metadata.provider
+
+    # Load config to check for max_tokens override
+    config_path = Path.home() / ".config" / "llm_keys" / "config.json"
+    max_tokens = None
+
+    # Try environment variable first
+    env_var = f"{provider.upper()}_MAX_TOKENS"
+    env_value = os.getenv(env_var)
+    if env_value:
+        try:
+            max_tokens = int(env_value)
+        except ValueError:
+            logger.warning(f"Invalid {env_var} value: {env_value}. Must be an integer.")
+
+    # If no env var, try config file
+    if max_tokens is None and config_path.exists():
+        try:
+            with open(config_path) as f:
+                config = json.load(f)
+                max_tokens_key = f"{provider}_max_tokens"
+                if max_tokens_key in config:
+                    try:
+                        max_tokens = int(config[max_tokens_key])
+                    except (ValueError, TypeError):
+                        logger.warning(f"Invalid {max_tokens_key} in config: {config[max_tokens_key]}. Must be an integer.")
+        except (json.JSONDecodeError, IOError):
+            pass
+
+    # If no config found, use model's default
+    if max_tokens is None:
+        max_tokens = metadata.default_max_tokens
+
     config = LLMConfig(
         api_key=api_key,
         model_name=model_name,
+        max_tokens=max_tokens
     )
     return implementation(config)
 

@@ -41,6 +41,7 @@ class ModelMetadata:
     supports_temperature: bool = True
     supports_reasoning_effort: bool = False
     reasoning_effort: Optional[ReasoningEffort] = None  # For O3 models that support reasoning effort
+    default_max_tokens: Optional[int] = None  # Default max_tokens for this model if not overridden
 
 
 # Model metadata mapping
