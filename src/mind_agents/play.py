@@ -47,20 +47,18 @@ def load_config() -> dict[str, str]:
         "google_api_key": "GOOGLE_API_KEY",
         "groq_api_key": "GROQ_API_KEY",
     }
-    
-    # Check if all keys are available in environment
-    all_env_keys_present = True
+
+    # Check environment variables and collect whatever is available
     for config_key, env_key in env_keys.items():
         value = os.getenv(env_key)
         if value:
             config[config_key] = value
-        else:
-            all_env_keys_present = False
-            
-    if all_env_keys_present:
+
+    # If we have at least one key from environment, return what we have
+    if config:
         return config
-            
-    # Fall back to config file if not all environment variables are set
+
+    # Fall back to config file if no environment variables are set
     config_path = Path.home() / ".config" / "llm_keys" / "config.json"
     if not config_path.exists():
         raise ValueError(
