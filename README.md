@@ -192,19 +192,19 @@ You can specify which model each player should use when running the game. To see
 
 ```bash
 # List all available models
-mind_agents --list-models
+uv run --active python -m mind_agents.play --list-models
 # or for the simulator
-python -m mind_agents.core.simulator --list-models
+uv run --active python -m mind_agents.core.simulator --list-models
 ```
 
 Then use specific models in your games:
 
 ```bash
 # Run game with specific models for each player
-mind_agents --models CLAUDE35_HAIKU GEMINI_1_5_FLASH GPT35_TURBO
+uv run --active python -m mind_agents.play --models CLAUDE35_HAIKU GEMINI_1_5_FLASH GPT35_TURBO
 
 # Run game with the same model for all players
-mind_agents --models CLAUDE35_SONNET
+uv run --active python -m mind_agents.play --models CLAUDE35_SONNET
 ```
 
 ## Game Simulator
@@ -221,10 +221,10 @@ The simulator allows testing specific game scenarios to analyze the AI's decisio
 Example simulator usage:
 ```bash
 # Run simulator with specific parameters
-python -m mind_agents.core.simulator -p 1 -o 1 -l 0 -m GPT4
+uv run --active python -m mind_agents.core.simulator -p 1 -o 1 -l 0 -m GPT4
 
 # Test more complex scenarios
-python -m mind_agents.core.simulator -p 2 -o 3 -l 1 -r 3 -m GPT4
+uv run --active python -m mind_agents.core.simulator -p 2 -o 3 -l 1 -r 3 -m GPT4
 ```
 
 ### Simulation Output
@@ -244,39 +244,49 @@ Each CSV contains:
 ## Installation
 
 1. Clone the repository
-2. Create a Python virtual environment
-3. Install dependencies:
+2. Install uv (if not already installed):
 ```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+3. Create a virtual environment and install dependencies:
+```bash
+# Create and activate a new virtual environment
+uv venv
+source .venv/bin/activate  # On Unix/macOS
+# OR
+.venv\Scripts\activate  # On Windows
+
+# Install dependencies
 uv pip install -r requirements.txt
 ```
-4. Configure your API keys:
 
-   You can configure your API keys using either environment variables (recommended) or a config file:
+## Usage
 
-   **Option 1: Environment Variables (Recommended)**
-   ```bash
-   export OPENAI_API_KEY="your-openai-key"
-   export ANTHROPIC_API_KEY="your-anthropic-key"
-   export GOOGLE_API_KEY="your-google-key"
-   export GROQ_API_KEY="your-groq-key"
-   ```
+First, ensure you're in your activated virtual environment. Then you can run commands like:
 
-   **Option 2: Config File**
-   - Create a file at `~/.config/llm_keys/config.json`
-   - Add your API keys in the following format:
-   ```json
-   {
-       "openai_api_key": "your-openai-key",
-       "anthropic_api_key": "your-anthropic-key",
-       "google_api_key": "your-google-key",
-       "groq_api_key": "your-groq-key"
-   }
-   ```
-   Note: You only need to add the API keys for the models you plan to use. The code will check for required keys based on the models you select.
+```bash
+# List all available models
+uv run --active python -m mind_agents.play --list-models
+
+# Run game with specific models for each player
+uv run --active python -m mind_agents.play --models CLAUDE35_HAIKU GEMINI_1_5_FLASH GPT35_TURBO
+
+# Run game with the same model for all players
+uv run --active python -m mind_agents.play --models CLAUDE35_SONNET
+
+# Run simulator with specific parameters
+uv run --active python -m mind_agents.core.simulator -p 1 -o 1 -l 0 -m GPT4
+
+# Test more complex scenarios
+uv run --active python -m mind_agents.core.simulator -p 2 -o 3 -l 1 -r 3 -m GPT4
+```
+
+Note: The `--active` flag tells uv to use your currently activated virtual environment. Make sure you've activated the environment and installed dependencies before running these commands.
 
 ## Requirements
 
 - Python 3.11+
+- uv: For fast dependency management and virtual environments
 - Dependencies listed in requirements.txt:
   - rich: For beautiful terminal output
   - pandas: For data handling in simulator
