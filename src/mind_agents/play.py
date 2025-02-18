@@ -16,6 +16,8 @@ from mind_agents.llm.prompts.wait_n_seconds_prompts import play_game_template
 from mind_agents.llm.types import MODELS, Card
 from mind_agents.llm.utilities import get_llm_client
 from rich.logging import RichHandler
+from rich.panel import Panel
+from rich.table import Table
 
 # Set up logging - set httpx to WARNING to hide request logs
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -588,7 +590,6 @@ async def test_specific_scenario(game_state_json: str, verbose: bool = False) ->
 
 def display_available_models() -> None:
     """Display the list of available models."""
-    console = console
     console.print("\n[bold cyan]Available Models:[/bold cyan]")
 
     table = Table(show_header=True)
