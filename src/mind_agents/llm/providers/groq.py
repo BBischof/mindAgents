@@ -120,6 +120,14 @@ class GroqChat(LLM):
             message = response.choices[0].message
             content = message.content or ""  # Handle None content
             
+            # Clean content if it's wrapped in markdown code blocks
+            if content.startswith('```') and content.endswith('```'):
+                # Remove the markdown code block markers and any language identifier
+                content_lines = content.split('\n')
+                if len(content_lines) > 2:  # At least 3 lines (opening, content, closing)
+                    content = '\n'.join(content_lines[1:-1])  # Remove first and last lines
+                    logging.debug("Cleaned markdown content: %s", content)
+            
             # Handle tool calls from response
             tool_calls = None
             if hasattr(message, 'tool_calls') and message.tool_calls:
@@ -132,11 +140,18 @@ class GroqChat(LLM):
                 try:
                     tool_data = json.loads(content)
                     logging.debug("Groq parsed tool_data: %s", tool_data)
-                    if isinstance(tool_data, dict):
+                    if isinstance(tool_data, dict) and "name" in tool_data:
+                        # Handle the case where the model returns a single tool call as JSON
                         tool_calls = [{
-                            "tool": tool_data.get("name", ""),
+                            "tool": tool_data["name"],
                             "parameters": tool_data.get("arguments", {})
                         }]
+                    elif isinstance(tool_data, list):
+                        # Handle the case where the model returns multiple tool calls
+                        tool_calls = [{
+                            "tool": tc.get("name", ""),
+                            "parameters": tc.get("arguments", {})
+                        } for tc in tool_data if "name" in tc]
                 except json.JSONDecodeError as e:
                     logging.debug("Could not parse content as JSON: %s", str(e))
                     pass
