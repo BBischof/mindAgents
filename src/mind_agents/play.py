@@ -10,20 +10,14 @@ import random
 from pathlib import Path
 from typing import Optional
 
-from mind_agents.core.display import display_game_state, display_player_action
+from mind_agents.core.display import console, display_game_state, display_player_action
 from mind_agents.core.game import GameState, GameStateInfo, PlayerAction, PlayerStats
 from mind_agents.llm.prompts.wait_n_seconds_prompts import play_game_template
 from mind_agents.llm.types import MODELS, Card
 from mind_agents.llm.utilities import get_llm_client
-from rich.console import Console
 from rich.logging import RichHandler
-from rich.panel import Panel
-from rich.table import Table
 
-# Set up rich console and logging
-console = Console()
-
-# Configure logging - set httpx to WARNING to hide request logs
+# Set up logging - set httpx to WARNING to hide request logs
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.basicConfig(
     level=logging.INFO,
@@ -33,7 +27,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Create a secondary console for the game state that will stay at the top
-game_state_console = Console()
+game_state_console = console
 
 
 def load_config() -> dict[str, str]:
@@ -575,7 +569,7 @@ async def test_specific_scenario(game_state_json: str, verbose: bool = False) ->
 
 def display_available_models() -> None:
     """Display the list of available models."""
-    console = Console()
+    console = console
     console.print("\n[bold cyan]Available Models:[/bold cyan]")
 
     table = Table(show_header=True)

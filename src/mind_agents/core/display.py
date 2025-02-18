@@ -11,6 +11,7 @@ import math
 # Set up rich console for display
 console = Console()
 
+__all__ = ['console', 'display_game_state', 'display_player_action']
 
 def display_game_state(game: GameState, verbose: bool = False, show_stats: bool = False) -> None:
     """Display the current game state using Rich.
