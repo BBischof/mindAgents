@@ -5,3 +5,4 @@ anthropic>=0.18.0
 google-generativeai>=0.3.2
 tiktoken>=0.6.0
 openai>=1.14.0
+groq>=0.4.0
