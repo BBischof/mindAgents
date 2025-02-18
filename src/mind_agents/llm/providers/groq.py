@@ -2,6 +2,7 @@
 
 import json
 from typing import Any
+import logging
 
 from groq import Groq
 
@@ -108,24 +109,37 @@ class GroqChat(LLM):
             if tools:
                 completion_params["tools"] = tools
 
+        logging.debug("Groq completion_params: %s", json.dumps(completion_params, indent=2))  
+
         try:
             # Make API call
             response = self.client.chat.completions.create(**completion_params)
+            logging.debug("Groq response: %s", response)  
 
-            # Extract content from response
-            content = response.choices[0].message.content
-
-            # Try to parse tool calls from JSON content
+            # Extract content and tool calls from response
+            message = response.choices[0].message
+            content = message.content or ""  # Handle None content
+            
+            # Handle tool calls from response
             tool_calls = None
-            try:
-                tool_data = json.loads(content)
-                if isinstance(tool_data, dict):
-                    tool_calls = [{
-                        "tool": tool_data.get("name", ""),
-                        "parameters": tool_data.get("arguments", {})
-                    }]
-            except json.JSONDecodeError:
-                pass
+            if hasattr(message, 'tool_calls') and message.tool_calls:
+                tool_calls = [{
+                    "tool": tc.function.name,
+                    "parameters": json.loads(tc.function.arguments)
+                } for tc in message.tool_calls]
+            else:
+                # Try to parse tool calls from content if not in response
+                try:
+                    tool_data = json.loads(content)
+                    logging.debug("Groq parsed tool_data: %s", tool_data)
+                    if isinstance(tool_data, dict):
+                        tool_calls = [{
+                            "tool": tool_data.get("name", ""),
+                            "parameters": tool_data.get("arguments", {})
+                        }]
+                except json.JSONDecodeError as e:
+                    logging.debug("Could not parse content as JSON: %s", str(e))
+                    pass
 
             return Response(
                 content=content,
@@ -135,6 +149,7 @@ class GroqChat(LLM):
             )
 
         except Exception as e:
+            logging.error("Groq error: %s", str(e))  
             return Response(
                 content="",
                 raw_response={},

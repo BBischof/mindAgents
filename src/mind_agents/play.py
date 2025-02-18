@@ -322,7 +322,7 @@ async def play_round(game: GameState, verbose: bool = False) -> None:
                 }
                 logger.error(
                     f"Failed to get action for player {player.id}:\n"
-                    f"Model: {player.model}\n"
+                    f"Model: {game.player_models[player.id - 1]}\n"
                     f"Game state: {json.dumps(game_state_info, indent=2)}\n"
                     f"This usually means either:\n"
                     f"1. The LLM failed to generate a response\n"
